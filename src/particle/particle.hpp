@@ -28,6 +28,10 @@ struct Particle {
   #if NINT_PARTICLE_DATA > 0
     int  idata[NINT_PARTICLE_DATA];
   #endif
+
+  Particle();
+  Particle(Particle const& other);
+  Particle& operator=(Particle const& other);
 };
 
 #ifdef MPI_PARALLEL

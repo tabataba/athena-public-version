@@ -10,6 +10,7 @@ RECONSTRUCT_FILE = @RECONSTRUCT_FILE@
 RSOLVER_FILE = @RSOLVER_FILE@
 RSOLVER_DIR = @RSOLVER_DIR@
 HYDRO_INT_FILE = @HYDRO_INT_FILE@
+ROOT = .
 
 # General compiler specifications
 
@@ -23,25 +24,25 @@ LDLIBS := @LIBRARY_FLAGS@
 
 EXE_DIR := bin/
 EXECUTABLE := $(EXE_DIR)@EXE_NAME@
-SRC_FILES := $(wildcard src/*.cpp) \
-	     $(wildcard src/bvals/*.cpp) \
-	     $(wildcard src/coordinates/*.cpp) \
-	     src/eos/$(EOS_FILE) \
-	     $(wildcard src/field/*.cpp) \
-	     $(wildcard src/hydro/*.cpp) \
-	     $(wildcard src/hydro/srcterms/*.cpp) \
-	     src/hydro/rsolvers/$(RSOLVER_DIR)$(RSOLVER_FILE) \
-	     $(wildcard src/mesh/*.cpp) \
-	     $(wildcard src/outputs/*.cpp) \
-			 src/reconstruct/reconstruction.cpp \
-			 src/reconstruct/dc.cpp \
-			 src/reconstruct/$(RECONSTRUCT_FILE) \
-	     $(wildcard src/task_list/*.cpp) \
-	     $(wildcard src/utils/*.cpp) \
-	     src/pgen/$(PROBLEM_FILE) \
-	     src/pgen/default_pgen.cpp \
-			 $(wildcard src/particle/*.cpp) \
-       $(wildcard src/chemistry/*.cpp)
+SRC_FILES := $(wildcard $(ROOT)/src/*.cpp) \
+	     $(wildcard $(ROOT)/src/bvals/*.cpp) \
+	     $(wildcard $(ROOT)/src/coordinates/*.cpp) \
+	     $(ROOT)/src/eos/$(EOS_FILE) \
+	     $(wildcard $(ROOT)/src/field/*.cpp) \
+	     $(wildcard $(ROOT)/src/hydro/*.cpp) \
+	     $(wildcard $(ROOT)/src/hydro/srcterms/*.cpp) \
+	     $(ROOT)/src/hydro/rsolvers/$(RSOLVER_DIR)$(RSOLVER_FILE) \
+	     $(wildcard $(ROOT)/src/mesh/*.cpp) \
+	     $(wildcard $(ROOT)/src/outputs/*.cpp) \
+			 $(ROOT)/src/reconstruct/reconstruction.cpp \
+			 $(ROOT)/src/reconstruct/dc.cpp \
+			 $(ROOT)/src/reconstruct/$(RECONSTRUCT_FILE) \
+	     $(wildcard $(ROOT)/src/task_list/*.cpp) \
+	     $(wildcard $(ROOT)/src/utils/*.cpp) \
+	     $(ROOT)/src/pgen/$(PROBLEM_FILE) \
+	     $(ROOT)/src/pgen/default_pgen.cpp \
+			 $(wildcard $(ROOT)/src/particle/*.cpp) \
+       $(wildcard $(ROOT)/src/chemistry/*.cpp)
 OBJ_DIR := obj/
 OBJ_FILES := $(addprefix $(OBJ_DIR),$(notdir $(SRC_FILES:.cpp=.o)))
 SRC_DIR := $(dir $(SRC_FILES) $(PROB_FILES))

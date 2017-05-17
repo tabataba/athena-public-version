@@ -54,12 +54,11 @@ Molecule::Molecule(ParameterInput *pin)
   std::vector<std::string> agas, acloud;
   SplitString(gas, agas);
   SplitString(cloud, acloud);
-  int ngas = gas.size();
-  int ncloud = cloud.size();
+  int ngas = agas.size();
+  int ncloud = acloud.size();
 
   if (ngas == 0) {
-    msg << "### FATAL ERROR in Molecule. Number of gas must be at least 1"
-    << std::endl;
+    msg << "### FATAL ERROR in Molecule. Number of gas must be at least 1" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
 

@@ -23,19 +23,22 @@ AirParcel::AirParcel()
     rdata[i] = 0.;
 }
 
-void AirParcel::Normalize() {
+void AirParcel::Normalize()
+{
   double mols = 0;
   for (int i = 0; i < ntotal; ++i) mols += Mol(i);
   for (int i = 0; i < ntotal; ++i) Mol(i) /= mols;
 }
 
-void AirParcel::SetFrom(double const* M, double T, double P) {
+void AirParcel::SetFrom(double const* M, double T, double P)
+{
   for (int i = 0; i < ntotal; ++i)
     Mol(i) = M[i];
   SetTP(T, P);
 }
 
-void AirParcel::SetTo(double *M, double *T, double *P) {
+void AirParcel::SetTo(double *M, double *T, double *P)
+{
   for (int i = 0; i < ntotal; ++i)
     M[i] = Mol(i);
   *T = GetTemp();

@@ -54,7 +54,7 @@
 #define MAXSHOMATE 3 // maximum number of shomate expressions
 
 // Forward declarations
-class ParametricInput;
+class ParameterInput;
 
 class Molecule {
   friend std::ostream& operator<<(std::ostream &os, Molecule const& mol);

@@ -16,6 +16,27 @@
 MPI_Datatype MPI_PARTICLE;
 #endif
 
+Particle::Particle() {}
+
+Particle::Particle(Particle const& other)
+{
+  if (this == &other) return;
+  *this = other;
+}
+
+Particle& Particle::operator=(Particle const& other)
+{
+#if NREAL_PARTICLE_DATA > 0
+  for (int i = 0; i < NREAL_PARTICLE_DATA; ++i)
+    rdata[i] = other.rdata[i];
+#endif
+
+#if NINT_PARTICLE_DATA > 0
+  for (int i = 0; i < NINT_PARTICLE_DATA; ++i)
+    idata[i] = other.idata[i];
+#endif
+}
+
 int ParticleGroup::ntotal = 0;
 
 // constructor, initializes data structure and parameters

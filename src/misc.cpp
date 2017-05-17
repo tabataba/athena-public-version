@@ -14,7 +14,7 @@ std::string DecommentFile(std::string fname)
 {
   std::stringstream msg;
   if (!IsFileExist(fname)) {
-    msg << "### FATAL ERROR in DecommentFile. File doesn't exist." << std::endl;
+    msg << "### FATAL ERROR in DecommentFile. File " << fname << " doesn't exist." << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
 
@@ -37,9 +37,12 @@ void SplitString(std::string str, std::vector<std::string>& result)
   std::istringstream ss(str);
   result.clear();
 
-  do {
+  while (ss) {
     std::string sub;
     ss >> sub;
     result.push_back(sub);
-  } while (ss);
+  }
+
+  // there is an empty space
+  result.pop_back();
 }
