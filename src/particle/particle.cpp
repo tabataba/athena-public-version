@@ -16,7 +16,22 @@
 MPI_Datatype MPI_PARTICLE;
 #endif
 
-Particle::Particle() {}
+Particle::Particle() :
+  time(0.), x1(0.), x2(0.), x3(0.),
+  v1(0.), v2(0.), v3(0.)
+{
+#if NREAL_PARTICLE_DATA > 0
+  for (int i = 0; i < NREAL_PARTICLE_DATA; ++i)
+    rdata[i] = 0.;
+#endif
+
+#if NINT_PARTICLE_DATA > 0
+  for (int i = 0; i < NINT_PARTICLE_DATA; ++i)
+    idata[i] = 0;
+#endif
+}
+
+Particle::~Particle() {}
 
 Particle::Particle(Particle const& other)
 {
@@ -26,6 +41,13 @@ Particle::Particle(Particle const& other)
 
 Particle& Particle::operator=(Particle const& other)
 {
+  time = other.time;
+  x1 = other.x1;
+  x2 = other.x2;
+  x3 = other.x3;
+  v1 = other.v1;
+  v2 = other.v2;
+  v3 = other.v3;
 #if NREAL_PARTICLE_DATA > 0
   for (int i = 0; i < NREAL_PARTICLE_DATA; ++i)
     rdata[i] = other.rdata[i];
@@ -34,6 +56,26 @@ Particle& Particle::operator=(Particle const& other)
 #if NINT_PARTICLE_DATA > 0
   for (int i = 0; i < NINT_PARTICLE_DATA; ++i)
     idata[i] = other.idata[i];
+#endif
+}
+
+std::ostream& operator<<(std::ostream &os, Particle const& pt)
+{
+  os << "time: "<< pt.time << std::endl
+     << "x1: " << pt.x1 << " v1: " << pt.v1 << std::endl
+     << "x2: " << pt.x2 << " v2: " << pt.v2 << std::endl
+     << "x3: " << pt.x3 << " v3: " << pt.v3 << std::endl;
+#if NREAL_PARTICLE_DATA > 0
+  os << "rdata: ";
+  for (int i = 0; i < NREAL_PARTICLE_DATA; ++i)
+    os << pt.rdata[i] << " ";
+  os << std::endl;
+#endif
+
+#if NINT_PARTICLE_DATA > 0
+  os << "idata: ";
+  for (int i = 0; i < NREAL_PARTICLE_DATA; ++i)
+    os << pt.idata[i] << " ";
 #endif
 }
 

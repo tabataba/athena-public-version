@@ -4,6 +4,7 @@
 // C++ headers
 #include <vector>
 #include <string>
+#include <iosfwd>
 
 // Athena++ classes headers
 #include "../athena.hpp"
@@ -30,9 +31,11 @@ struct Particle {
   #endif
 
   Particle();
+  ~Particle();
   Particle(Particle const& other);
   Particle& operator=(Particle const& other);
 };
+std::ostream& operator<<(std::ostream &os, Particle const& pt);
 
 #ifdef MPI_PARALLEL
 extern MPI_Datatype MPI_PARTICLE;
