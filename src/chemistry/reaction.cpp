@@ -13,8 +13,10 @@
 
 Reaction::Reaction()
 {
-  for (int i = 0; i < NREACTORS; ++i)
+  for (int i = 0; i < NREACTORS; ++i) {
     reactor[i] = -1;
+    measure[i] = 0.;
+  }
   for (int i = 0; i < NCOEFFS; ++i)
     coeff[i] = 0.;
   pfunc = NULL;
@@ -31,8 +33,11 @@ Reaction::Reaction(Reaction const& other)
 Reaction& Reaction::operator=(Reaction const& other)
 {
   name = other.name;
-  for (int i = 0; i < NREACTORS; ++i)
+  comment = other.comment;
+  for (int i = 0; i < NREACTORS; ++i) {
     reactor[i] = other.reactor[i];
+    measure[i] = other.measure[i];
+  }
   for (int i = 0; i < NCOEFFS; ++i)
     coeff[i] = other.coeff[i];
   pfunc = other.pfunc;
