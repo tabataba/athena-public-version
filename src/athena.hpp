@@ -78,5 +78,6 @@ typedef void (*SrcTermFunc_t)(MeshBlock *pmb, const Real time, const Real dt, co
 typedef Real (*TimeStepFunc_t)(MeshBlock *pmb);
 typedef Real (*HistoryOutputFunc_t)(MeshBlock *pmb, int iout);
 typedef bool (*ParticleUpdateFunc_t)(MeshBlock *pmb, Particle& pt, int cid[3], Real const time, Real const dt);
+typedef Real (*ReactionFunc_t)(Real temp, Real pres, int* index, int num, void *other);
 
 #endif // ATHENA_HPP

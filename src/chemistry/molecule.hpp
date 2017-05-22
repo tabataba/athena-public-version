@@ -85,6 +85,7 @@ public:
 
   Molecule* GetMolecule(std::string name);
   Molecule const* GetMolecule(std::string name) const;
+  int GetMoleculeId(std::string name) const;
 
 protected:
   Real m_cp, m_latent, m_entropy, m_enthalpy, 

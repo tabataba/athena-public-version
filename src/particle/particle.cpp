@@ -5,7 +5,7 @@
 
 // Athena++ headers
 #include "particle.hpp"
-#include "../athena.hpp"
+//#include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../mesh/mesh.hpp"
 #include "../coordinates/coordinates.hpp"
@@ -57,6 +57,7 @@ Particle& Particle::operator=(Particle const& other)
   for (int i = 0; i < NINT_PARTICLE_DATA; ++i)
     idata[i] = other.idata[i];
 #endif
+  return *this;
 }
 
 std::ostream& operator<<(std::ostream &os, Particle const& pt)
@@ -77,6 +78,7 @@ std::ostream& operator<<(std::ostream &os, Particle const& pt)
   for (int i = 0; i < NREAL_PARTICLE_DATA; ++i)
     os << pt.idata[i] << " ";
 #endif
+  return os;
 }
 
 int ParticleGroup::ntotal = 0;

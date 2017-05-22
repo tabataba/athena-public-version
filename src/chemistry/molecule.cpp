@@ -251,3 +251,22 @@ Molecule const* Molecule::GetMolecule(std::string name) const
   }
   return p;
 }
+
+
+int Molecule::GetMoleculeId(std::string name) const
+{
+  std::stringstream msg;
+  Molecule const *p = this;
+  int id = 0;
+
+  while ((p != NULL) && (p->name != name)) {
+    p = p->next;
+    id++;
+  }
+  if (p == NULL) {
+    msg << "### FATAL ERROR in Molecule:GetMolecule " << name << " not found" <<
+    std::endl;
+    throw std::runtime_error(msg.str().c_str());
+  }
+  return id;
+}
