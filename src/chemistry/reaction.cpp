@@ -13,12 +13,11 @@
 
 Reaction::Reaction()
 {
-  for (int i = 0; i < NREACTORS; ++i) {
+  id = -1;
+  for (int i = 0; i < NCOMPONENT; ++i) {
     reactor[i] = -1;
     measure[i] = 0.;
   }
-  for (int i = 0; i < NCOEFFS; ++i)
-    coeff[i] = 0.;
   pfunc = NULL;
 }
 
@@ -32,14 +31,14 @@ Reaction::Reaction(Reaction const& other)
 
 Reaction& Reaction::operator=(Reaction const& other)
 {
+  id = other.id;
   name = other.name;
   comment = other.comment;
-  for (int i = 0; i < NREACTORS; ++i) {
+  for (int i = 0; i < NCOMPONENT; ++i) {
     reactor[i] = other.reactor[i];
     measure[i] = other.measure[i];
   }
-  for (int i = 0; i < NCOEFFS; ++i)
-    coeff[i] = other.coeff[i];
+  coeff = other.coeff;
   pfunc = other.pfunc;
   return *this;
 }
@@ -54,8 +53,7 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
   bool in_comment = false;
   int nreagent = 0;
   int ntotal = 0;
-  int ncoeff = 0;
-  std::string molecule[NREACTORS];
+  std::string molecule[NCOMPONENT];
 
   while (ss.good()) {
     ss >> token;
@@ -113,10 +111,8 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
       }
       ntotal++;
     }
-    if (in_coeff) {
-      coeff[ncoeff] = atof(token.c_str());
-      ncoeff++;
-    }
+    if (in_coeff)
+      coeff.push_back(atof(token.c_str()));
     if (in_comment) {
       char line[256];
       ss.getline(line, 256);
@@ -138,9 +134,10 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
 std::ostream& operator<<(std::ostream &os, Reaction const& rt)
 {
   os << rt.name;
-  for (int i = 0; i < NCOEFFS; ++i)
+  for (size_t i = 0; i < rt.coeff.size(); ++i)
     os << std::setw(12) << rt.coeff[i];
-  os << " ! " << rt.comment;
+  if (rt.comment != "")
+    os << " ! " << rt.comment;
   return os;
 }
 
@@ -200,4 +197,18 @@ std::vector<Reaction> const& ReactionGroup::GetReactions(std::string name) const
   }
 
   return p->r;
+}
+
+void ReactionGroup::SetAllReactionIds()
+{
+  ReactionGroup *p = this;
+
+  int id = 0;
+  while (p != NULL) {
+    for (int i = 0; i < r.size(); ++i) {
+      r[i].id = id;
+      id++;
+    }
+    p = p->next;
+  }
 }

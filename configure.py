@@ -94,6 +94,11 @@ parser.add_argument('--particle',
           + map(lambda x: hex(x)[2:], range(16, 256)),
     help='request the number of real and integer particle data')
 
+# --component=[num] argument
+parser.add_argument('--component',
+    default='1',
+    help='request the number of components in hydro eos')
+
 # --exe=[name] argument
 parser.add_argument('--exe',
     default='athena',
@@ -273,6 +278,9 @@ definitions['HYDRO_INTEGRATOR'] = makefile_options['HYDRO_INT_FILE'] = args['fin
 # --particle=[num] argument
 definitions['NREAL_PARTICLE_DATA'] = str(int(args['particle'][0], 16))
 definitions['NINT_PARTICLE_DATA']  = str(int(args['particle'][1], 16))
+
+# --component=[num] argument
+definitions['NCOMPONENT_VARIABLES'] = str(int(args['component']))
 
 # --exe=[name] argument
 definitions['EXE_NAME'] = makefile_options['EXE_NAME'] = args['exe']
@@ -474,6 +482,7 @@ print('Your Athena++ distribution has now been configured with the following opt
 print('  Problem generator:       ' + args['prob'])
 print('  Coordinate system:       ' + args['coord'])
 print('  Equation of state:       ' + args['eos'])
+print('  Components:              ' + args['component'])
 print('  Riemann solver:          ' + args['flux'])
 print('  Reconstruction method:   ' + args['order'])
 print('  Hydro integrator:        ' + args['fint'])

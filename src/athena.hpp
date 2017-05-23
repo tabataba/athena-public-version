@@ -22,6 +22,7 @@ class MeshBlock;
 class Coordinates;
 struct RegionSize;
 struct Particle;
+struct Reaction;
 
 //---------------------------------------------------------------------------------------
 //! \struct FaceField
@@ -78,6 +79,7 @@ typedef void (*SrcTermFunc_t)(MeshBlock *pmb, const Real time, const Real dt, co
 typedef Real (*TimeStepFunc_t)(MeshBlock *pmb);
 typedef Real (*HistoryOutputFunc_t)(MeshBlock *pmb, int iout);
 typedef bool (*ParticleUpdateFunc_t)(MeshBlock *pmb, Particle& pt, int cid[3], Real const time, Real const dt);
-typedef Real (*ReactionFunc_t)(Real temp, Real pres, int* index, int num, void *other);
+typedef void (*ReactionFunc_t)(MeshBlock *pmb, Real const time, Reaction const& rc, 
+  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
 
 #endif // ATHENA_HPP

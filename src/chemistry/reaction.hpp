@@ -13,12 +13,13 @@ class MeshBlock;
 class Molecule;
 
 struct Reaction {
+  int id;
   std::string name;
   std::string comment;
-  int reactor[NREACTORS];
-  Real measure[NREACTORS];
-  Real coeff[NCOEFFS];
+  int reactor[NCOMPONENT];
+  Real measure[NCOMPONENT];
   ReactionFunc_t pfunc;
+  std::vector<Real> coeff;
 
   Reaction();
   ~Reaction();
@@ -45,6 +46,7 @@ public:
   ReactionGroup* AddReactionGroup(MeshBlock *pmb, std::string name);
   std::vector<Reaction>& GetReactions(std::string name);
   std::vector<Reaction> const& GetReactions(std::string name) const;
+  void SetAllReactionIds();
 };
 
 #endif
