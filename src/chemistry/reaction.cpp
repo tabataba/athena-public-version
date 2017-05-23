@@ -14,7 +14,7 @@
 Reaction::Reaction()
 {
   id = -1;
-  for (int i = 0; i < NCOMPONENT; ++i) {
+  for (int i = 0; i < NCOMP; ++i) {
     reactor[i] = -1;
     measure[i] = 0.;
   }
@@ -34,7 +34,7 @@ Reaction& Reaction::operator=(Reaction const& other)
   id = other.id;
   name = other.name;
   comment = other.comment;
-  for (int i = 0; i < NCOMPONENT; ++i) {
+  for (int i = 0; i < NCOMP; ++i) {
     reactor[i] = other.reactor[i];
     measure[i] = other.measure[i];
   }
@@ -53,7 +53,7 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
   bool in_comment = false;
   int nreagent = 0;
   int ntotal = 0;
-  std::string molecule[NCOMPONENT];
+  std::string molecule[NCOMP];
 
   while (ss.good()) {
     ss >> token;

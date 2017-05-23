@@ -16,8 +16,8 @@ struct Reaction {
   int id;
   std::string name;
   std::string comment;
-  int reactor[NCOMPONENT];
-  Real measure[NCOMPONENT];
+  int reactor[NCOMP];
+  Real measure[NCOMP];
   ReactionFunc_t pfunc;
   std::vector<Real> coeff;
 
@@ -41,6 +41,7 @@ public:
   std::string name;
   ReactionGroup *prev, *next;
   std::vector<Reaction> r;
+  static AthenaArray<Real> rate;
 
   // functions
   ReactionGroup* AddReactionGroup(MeshBlock *pmb, std::string name);

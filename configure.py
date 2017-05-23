@@ -96,7 +96,7 @@ parser.add_argument('--particle',
 
 # --component=[num] argument
 parser.add_argument('--component',
-    default='1',
+    default='10',
     help='request the number of components in hydro eos')
 
 # --exe=[name] argument
@@ -259,8 +259,10 @@ else:
   definitions['NON_BAROTROPIC_EOS'] = '0'
 
 # set number of hydro variables for adiabatic/isothermal
+ngas = int(args['component'][0], 16)
+ncloud = int(args['component'][1], 16)
 if args['eos'] == 'adiabatic':
-  definitions['NHYDRO_VARIABLES'] = '5'
+  definitions['NHYDRO_VARIABLES'] = str(4 + ngas + ncloud)
 if args['eos'] == 'isothermal':
   definitions['NHYDRO_VARIABLES'] = '4'
 if args['eos'] == 'shallow_water':
@@ -280,7 +282,8 @@ definitions['NREAL_PARTICLE_DATA'] = str(int(args['particle'][0], 16))
 definitions['NINT_PARTICLE_DATA']  = str(int(args['particle'][1], 16))
 
 # --component=[num] argument
-definitions['NCOMPONENT_VARIABLES'] = str(int(args['component']))
+definitions['NGAS_VARIABLES'] = str(ngas)
+definitions['NCOMP_VARIABLES'] = str(ngas + ncloud)
 
 # --exe=[name] argument
 definitions['EXE_NAME'] = makefile_options['EXE_NAME'] = args['exe']

@@ -7,6 +7,14 @@
 // Athena++ headers
 #include "../athena.hpp"
 
+Real SatVaporPresIdeal(Real t, Real p, Real beta, Real gamma) {
+    return p * exp((1. - 1. / t) * beta - gamma * log(t));
+}
+
+Real DlnpDlnTIdeal(Real t, Real beta, Real gamma) {
+    return beta / t - gamma;
+}
+
 Real SatVaporPresH2OUMich(Real T) {
   Real x =
     -2445.5646/T +
@@ -112,8 +120,8 @@ Real SatVaporPresH2OIdeal(Real T)
          tr = 273.16,
          pr = 611.7;
 
-  return T > tr ? SatVaporPresideal(T / tr, pr, betal, gammal)
-    : SatVaporPresideal(T / tr, pr, betas, gammas);
+  return T > tr ? SatVaporPresIdeal(T / tr, pr, betal, gammal)
+    : SatVaporPresIdeal(T / tr, pr, betas, gammas);
 }
 
 Real SatVaporPresNH3UMich(Real T)
@@ -193,8 +201,8 @@ Real SatVaporPresNH3Ideal(Real T)
        tr = 195.4,
        pr = 6060.;
 
-  return T > tr ? SatVaporPresideal(T / tr, pr, betal, gammal)
-    : SatVaporPresideal(T / tr, pr, betas, gammas);
+  return T > tr ? SatVaporPresIdeal(T / tr, pr, betal, gammal)
+    : SatVaporPresIdeal(T / tr, pr, betas, gammas);
 }
 
 Real SatVaporPresH2SAntoine(Real T)
