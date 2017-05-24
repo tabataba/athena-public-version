@@ -13,9 +13,7 @@ class MeshBlock;
 class Molecule;
 
 struct Reaction {
-  int id;
-  std::string name;
-  std::string comment;
+  std::string name, tag, comment;
   int reactor[NCOMP];
   Real measure[NCOMP];
   ReactionFunc_t pfunc;
@@ -29,7 +27,7 @@ struct Reaction {
   void SetFromString(std::string str, Molecule *pmol);
 };
 
-std::ostream& operator<<(std::ostream &os, Reaction const& rt);
+std::ostream& operator<<(std::ostream &os, Reaction const& rc);
 
 class ReactionGroup {
 public:
@@ -40,14 +38,16 @@ public:
   MeshBlock* pmy_block;
   std::string name;
   ReactionGroup *prev, *next;
-  std::vector<Reaction> r;
-  static AthenaArray<Real> rate;
+  AthenaArray<Real> rate;
 
   // functions
   ReactionGroup* AddReactionGroup(MeshBlock *pmb, std::string name);
   std::vector<Reaction>& GetReactions(std::string name);
   std::vector<Reaction> const& GetReactions(std::string name) const;
-  void SetAllReactionIds();
+  void SetReactionRateArray();
+
+protected:
+  std::vector<Reaction> q;
 };
 
 #endif

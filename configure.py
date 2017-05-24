@@ -99,6 +99,12 @@ parser.add_argument('--component',
     default='10',
     help='request the number of components in hydro eos')
 
+# --main=[name] argument
+parser.add_argument('--main',
+    default='main',
+    choices=['main', 'thermodynamics'],
+    help='name of the main source file')
+
 # --exe=[name] argument
 parser.add_argument('--exe',
     default='athena',
@@ -287,6 +293,9 @@ definitions['NCOMP_VARIABLES'] = str(ngas + ncloud)
 
 # --exe=[name] argument
 definitions['EXE_NAME'] = makefile_options['EXE_NAME'] = args['exe']
+
+# --main=[name] argument
+definitions['MAIN_NAME'] = makefile_options['MAIN_NAME'] = args['main']
 
 # -b argument
 # set variety of macros based on whether MHD/hydro or adi/iso are defined
@@ -490,6 +499,7 @@ print('  Riemann solver:          ' + args['flux'])
 print('  Reconstruction method:   ' + args['order'])
 print('  Hydro integrator:        ' + args['fint'])
 print('  Particle data:           ' + args['particle'])
+print('  Main source file name    ' + args['main'])
 print('  Executable name:         ' + args['exe'])
 print('  Magnetic fields:         ' + ('ON' if args['b'] else 'OFF'))
 print('  Special relativity:      ' + ('ON' if args['s'] else 'OFF'))

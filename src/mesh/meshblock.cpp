@@ -24,6 +24,8 @@
 #include "../hydro/hydro.hpp" 
 #include "../field/field.hpp"
 #include "../particle/particle.hpp"
+#include "../chemistry/molecule.hpp"
+#include "../chemistry/reaction.hpp"
 #include "../bvals/bvals.hpp"
 #include "../eos/eos.hpp"
 #include "../parameter_input.hpp"
@@ -128,6 +130,10 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   // particle-related objects
   ppg = NULL;
+
+  // chemistry-related objects
+  pmol = NULL;
+  prg = NULL;
 
   // Create user mesh data
   InitUserMeshBlockData(pin);
@@ -287,6 +293,20 @@ MeshBlock::~MeshBlock()
     delete p;
   }
   ppg = NULL;
+
+  while (pmol != NULL) {
+    Molecule *p = pmol;
+    pmol = pmol->next;
+    delete p;
+  }
+  pmol = NULL;
+
+  while (prg != NULL) {
+    ReactionGroup *p = prg;
+    prg = prg->next;
+    delete p;
+  }
+  prg = NULL;
 
   // delete user output variables array
   user_out_var.DeleteAthenaArray();

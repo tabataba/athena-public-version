@@ -1071,6 +1071,16 @@ void Mesh::EnrollUserParticleUpdateFunction(ParticleUpdateFunc_t my_func)
 }
 
 //----------------------------------------------------------------------------------------
+//! \fn void Mesh::EnrollUserReactionFunction(ReactionFunc_t my_func)
+//  \brief Enroll a user-defined reaction function
+
+void Mesh::EnrollUserReactionFunction(std::string tag, ReactionFunc_t my_func)
+{
+  reaction_fns_[tag] = my_func;
+  return;
+}
+
+//----------------------------------------------------------------------------------------
 //! \fn void Mesh::AllocateUserHistoryOutput(int n)
 //  \brief set the number of user-defined history outputs
 

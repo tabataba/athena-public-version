@@ -13,6 +13,7 @@
 // C/C++ headers
 #include <stdint.h>  // int64_t
 #include <string>
+#include <map>
 
 // Athena++ classes headers
 #include "../athena.hpp"
@@ -37,6 +38,8 @@ class Hydro;
 class Field;
 class EquationOfState;
 class ParticleGroup;
+class Molecule;
+class ReactionGroup;
 
 //----------------------------------------------------------------------------------------
 //! \struct NeighborBlock
@@ -129,8 +132,12 @@ public:
   Field *pfield;
   EquationOfState *peos;
 
-  // Particle-related objects
+  // particle-related objects
   ParticleGroup *ppg;
+
+  // chemistry-related objects
+  Molecule *pmol;
+  ReactionGroup *prg;
 
   MeshBlock *prev, *next;
 
@@ -235,6 +242,7 @@ private:
   TimeStepFunc_t UserTimeStep_;
   HistoryOutputFunc_t *user_history_func_;
   ParticleUpdateFunc_t particle_fn_;
+  std::map<std::string, ReactionFunc_t> reaction_fns_;
   void AllocateRealUserMeshDataField(int n);
   void AllocateIntUserMeshDataField(int n);
   void OutputMeshStructure(int dim);
@@ -248,6 +256,7 @@ private:
   void EnrollUserExplicitSourceFunction(SrcTermFunc_t my_func);
   void EnrollUserTimeStepFunction(TimeStepFunc_t my_func);
   void EnrollUserParticleUpdateFunction(ParticleUpdateFunc_t my_func);
+  void EnrollUserReactionFunction(std::string tag, ReactionFunc_t my_func);
   void AllocateUserHistoryOutput(int n);
   void EnrollUserHistoryOutput(int i, HistoryOutputFunc_t my_func, const char *name);
 };

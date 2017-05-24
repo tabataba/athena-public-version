@@ -8,25 +8,11 @@ class MeshBlock;
 template<typename T> class AthenaArray;
 
 void GasGasSolidNH4SH(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
+  AthenaArray<Real> const& prim, int i, AthenaArray<Real>& rate, int r);
 
 void GasCloudIdeal(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
+  AthenaArray<Real> const& prim, int i, AthenaArray<Real>& rate, int r);
 void LiquidSolidIdeal(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
-
-void GasLiquidH2O(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
-void GasSolidH2O(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
-void LiquidSolidH2O(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
-
-void GasLiquidNH3(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
-void GasSolidNH3(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
-void LiquidSolidNH3(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, AthenaArray<Real>& rate);
+  AthenaArray<Real> const& prim, int i, AthenaArray<Real>& rate, int r);
 
 #endif

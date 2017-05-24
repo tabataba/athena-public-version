@@ -13,7 +13,6 @@
 
 Reaction::Reaction()
 {
-  id = -1;
   for (int i = 0; i < NCOMP; ++i) {
     reactor[i] = -1;
     measure[i] = 0.;
@@ -31,7 +30,7 @@ Reaction::Reaction(Reaction const& other)
 
 Reaction& Reaction::operator=(Reaction const& other)
 {
-  id = other.id;
+  tag = other.tag;
   name = other.name;
   comment = other.comment;
   for (int i = 0; i < NCOMP; ++i) {
@@ -45,6 +44,7 @@ Reaction& Reaction::operator=(Reaction const& other)
 
 void Reaction::SetFromString(std::string str, Molecule *pmol)
 {
+  std::stringstream msg;
   std::istringstream ss(str);
   std::string token, type;
   bool in_reagent = true;
@@ -95,6 +95,10 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
       }
       nreagent++;
       ntotal++;
+      if (ntotal >= NCOMP) {
+        msg << "### FATAL ERROR in Reaction:SetFromString, number of reagents exceeds NCOMP" << std::endl;
+        throw std::runtime_error(msg.str().c_str());
+      }
     }
     if (in_product) {
       size_t idigit = token.find_first_not_of("0123456789.");
@@ -110,6 +114,10 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
         molecule[ntotal] = symbol;
       }
       ntotal++;
+      if (ntotal >= NCOMP) {
+        msg << "### FATAL ERROR in Reaction:SetFromString, number of reagents exceeds NCOMP" << std::endl;
+        throw std::runtime_error(msg.str().c_str());
+      }
     }
     if (in_coeff)
       coeff.push_back(atof(token.c_str()));
@@ -131,13 +139,15 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
   name.erase(name.size() - 1);
 }
 
-std::ostream& operator<<(std::ostream &os, Reaction const& rt)
+std::ostream& operator<<(std::ostream &os, Reaction const& rc)
 {
-  os << rt.name;
-  for (size_t i = 0; i < rt.coeff.size(); ++i)
-    os << std::setw(12) << rt.coeff[i];
-  if (rt.comment != "")
-    os << " ! " << rt.comment;
+  os << rc.name;
+  for (size_t i = 0; i < rc.coeff.size(); ++i)
+    os << std::setw(12) << rc.coeff[i];
+  if (rc.comment != "")
+    os << " ! " << rc.comment;
+  if (rc.tag != "")
+    os << ", " << rc.tag;
   return os;
 }
 
@@ -146,10 +156,18 @@ ReactionGroup::ReactionGroup(MeshBlock *pmb, std::string _name):
 {
   prev = NULL;
   next = NULL;
+
+  // this is dummpy allocation of memory for reaction rate array
+  int ncells1 = pmy_block->block_size.nx1 + 2*(NGHOST);
+  int ncells2 = 1, ncells3 = 1;
+  if (pmy_block->block_size.nx2 > 1) ncells2 = pmy_block->block_size.nx2 + 2*(NGHOST);
+  if (pmy_block->block_size.nx3 > 1) ncells3 = pmy_block->block_size.nx3 + 2*(NGHOST);
+  rate.NewAthenaArray(ncells3,ncells2,ncells1);
 }
 
 ReactionGroup::~ReactionGroup()
 {
+  rate.DeleteAthenaArray();
   if (prev != NULL) prev->next = next;
   if (next != NULL) next->prev = prev;
 }
@@ -182,7 +200,7 @@ std::vector<Reaction>& ReactionGroup::GetReactions(std::string name)
     throw std::runtime_error(msg.str().c_str());
   }
 
-  return p->r;
+  return p->q;
 }
 
 std::vector<Reaction> const& ReactionGroup::GetReactions(std::string name) const
@@ -196,19 +214,16 @@ std::vector<Reaction> const& ReactionGroup::GetReactions(std::string name) const
     throw std::runtime_error(msg.str().c_str());
   }
 
-  return p->r;
+  return p->q;
 }
 
-void ReactionGroup::SetAllReactionIds()
+void ReactionGroup::SetReactionRateArray()
 {
-  ReactionGroup *p = this;
-
-  int id = 0;
-  while (p != NULL) {
-    for (int i = 0; i < r.size(); ++i) {
-      r[i].id = id;
-      id++;
-    }
-    p = p->next;
-  }
+  rate.DeleteAthenaArray();
+  // Allocate memory for reaction rate array
+  int ncells1 = pmy_block->block_size.nx1 + 2*(NGHOST);
+  int ncells2 = 1, ncells3 = 1;
+  if (pmy_block->block_size.nx2 > 1) ncells2 = pmy_block->block_size.nx2 + 2*(NGHOST);
+  if (pmy_block->block_size.nx3 > 1) ncells3 = pmy_block->block_size.nx3 + 2*(NGHOST);
+  rate.NewAthenaArray(q.size(),ncells3,ncells2,ncells1);
 }

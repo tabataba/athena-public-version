@@ -22,9 +22,12 @@ LDLIBS := @LIBRARY_FLAGS@
 
 # Preliminary definitions
 
+MAIN_FILES := $(ROOT)/src/main.cpp $(ROOT)/src/thermodynamics.cpp
+MAIN := @MAIN_NAME@
 EXE_DIR := bin/
 EXECUTABLE := $(EXE_DIR)@EXE_NAME@
-SRC_FILES := $(wildcard $(ROOT)/src/*.cpp) \
+SRC_FILES := $(ROOT)/src/$(MAIN).cpp \
+       $(filter-out $(MAIN_FILES), $(wildcard $(ROOT)/src/*.cpp)) \
 	     $(wildcard $(ROOT)/src/bvals/*.cpp) \
 	     $(wildcard $(ROOT)/src/coordinates/*.cpp) \
 	     $(ROOT)/src/eos/$(EOS_FILE) \
