@@ -10,10 +10,11 @@
 #include "reaction.hpp"
 #include "../athena_arrays.hpp"
 #include "../mesh/mesh.hpp"
+#include "../parameter_input.hpp"
 
 Reaction::Reaction()
 {
-  for (int i = 0; i < NCOMP; ++i) {
+  for (int i = 0; i < NREACTOR; ++i) {
     reactor[i] = -1;
     measure[i] = 0.;
   }
@@ -33,7 +34,7 @@ Reaction& Reaction::operator=(Reaction const& other)
   tag = other.tag;
   name = other.name;
   comment = other.comment;
-  for (int i = 0; i < NCOMP; ++i) {
+  for (int i = 0; i < NREACTOR; ++i) {
     reactor[i] = other.reactor[i];
     measure[i] = other.measure[i];
   }
@@ -42,7 +43,7 @@ Reaction& Reaction::operator=(Reaction const& other)
   return *this;
 }
 
-void Reaction::SetFromString(std::string str, Molecule *pmol)
+void Reaction::SetFromString(std::string str, Molecule *pmol, std::string tag_)
 {
   std::stringstream msg;
   std::istringstream ss(str);
@@ -53,7 +54,10 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
   bool in_comment = false;
   int nreagent = 0;
   int ntotal = 0;
-  std::string molecule[NCOMP];
+  std::string molecule[NREACTOR];
+
+  // clear coefficients
+  coeff.clear();
 
   while (ss.good()) {
     ss >> token;
@@ -95,8 +99,8 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
       }
       nreagent++;
       ntotal++;
-      if (ntotal >= NCOMP) {
-        msg << "### FATAL ERROR in Reaction:SetFromString, number of reagents exceeds NCOMP" << std::endl;
+      if (ntotal >= NREACTOR) {
+        msg << "### FATAL ERROR in Reaction:SetFromString, number of reagents exceeds NREACTOR" << std::endl;
         throw std::runtime_error(msg.str().c_str());
       }
     }
@@ -114,8 +118,8 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
         molecule[ntotal] = symbol;
       }
       ntotal++;
-      if (ntotal >= NCOMP) {
-        msg << "### FATAL ERROR in Reaction:SetFromString, number of reagents exceeds NCOMP" << std::endl;
+      if (ntotal >= NREACTOR) {
+        msg << "### FATAL ERROR in Reaction:SetFromString, number of reagents exceeds NREACTOR" << std::endl;
         throw std::runtime_error(msg.str().c_str());
       }
     }
@@ -137,7 +141,15 @@ void Reaction::SetFromString(std::string str, Molecule *pmol)
   for (int i = nreagent + 1; i < ntotal; i++)
     name += "+ " + molecule[i] + " ";
   name.erase(name.size() - 1);
+  tag = tag_;
+
+  // reset quantities other than ntotal
+  for (int i = ntotal; i < NREACTOR; ++i) {
+    reactor[i] = -1;
+    measure[i] = 0.;
+  }
 }
+
 
 std::ostream& operator<<(std::ostream &os, Reaction const& rc)
 {
@@ -187,6 +199,16 @@ ReactionGroup* ReactionGroup::AddReactionGroup(MeshBlock *pmb, std::string name)
   p->next->next = NULL;
 
   return p->next;
+}
+
+ReactionGroup* ReactionGroup::AddReaction(ParameterInput *pin, std::string block,
+  std::string tag_, Molecule *pmol, ReactionFunc_t pfunc_)
+{
+  std::string rname = pin->GetString(block, tag_);
+  Reaction rc;
+  rc.SetFromString(rname, pmol, tag_);
+  rc.pfunc = pfunc_;
+  q.push_back(rc);
 }
 
 std::vector<Reaction>& ReactionGroup::GetReactions(std::string name)

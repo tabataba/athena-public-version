@@ -66,7 +66,7 @@ parser.add_argument('--coord',
 # --eos=[name] argument
 parser.add_argument('--eos',
     default='adiabatic',
-    choices=['adiabatic','isothermal', 'shallow_water'],
+    choices=['adiabatic','isothermal', 'shallow_water', 'heterogeneous'],
     help='select equation of state')
 
 # --flux=[name] argument
@@ -97,6 +97,7 @@ parser.add_argument('--particle',
 # --component=[num] argument
 parser.add_argument('--component',
     default='10',
+    choices= map(lambda x: hex(x)[2:], range(16, 256)),
     help='request the number of components in hydro eos')
 
 # --main=[name] argument
@@ -203,6 +204,8 @@ if args['flux'] == 'default':
     args['flux'] = 'hlle'
   elif args['eos'] == 'shallow_water':
     args['flux'] = 'roe'
+  elif args['eos'] == 'heterogeneous':
+    args['flux'] = 'roe'
   else:
     args['flux'] = 'hllc'
 
@@ -214,6 +217,8 @@ if args['flux'] == 'hllc' and args['b']:
 if args['flux'] == 'hlld' and not args['b']:
   raise SystemExit('### CONFIGURE ERROR: HLLD flux can only be used with MHD')
 if args['flux'] != 'roe' and args['eos'] == 'shallow_water':
+  raise SystemExit('### CONFIGURE ERROR: ShallowWater model only be used with Roe flux')
+if args['flux'] != 'roe' and args['eos'] == 'heterogeneous':
   raise SystemExit('### CONFIGURE ERROR: ShallowWater model only be used with Roe flux')
 
 # Check relativity
@@ -257,7 +262,7 @@ definitions['COORDINATE_SYSTEM'] = makefile_options['COORDINATES_FILE'] = args['
 definitions['EQUATION_OF_STATE'] = makefile_options['EOS_FILE'] = args['eos']
 
 # legacy defnition of NON_BAROTROPIC_EOS
-if args['eos'] == 'adiabatic':
+if args['eos'] == 'adiabatic' or args['eos'] == 'heterogenous':
   definitions['NON_BAROTROPIC_EOS'] = '1'
 elif args['eos'] == 'shallow_water':
   definitions['NON_BAROTROPIC_EOS'] = '0'
@@ -268,11 +273,13 @@ else:
 ngas = int(args['component'][0], 16)
 ncloud = int(args['component'][1], 16)
 if args['eos'] == 'adiabatic':
-  definitions['NHYDRO_VARIABLES'] = str(4 + ngas + ncloud)
+  definitions['NHYDRO_VARIABLES'] = '5'
 if args['eos'] == 'isothermal':
   definitions['NHYDRO_VARIABLES'] = '4'
 if args['eos'] == 'shallow_water':
   definitions['NHYDRO_VARIABLES'] = '4'
+if args['eos'] == 'heterogeneous':
+  definitions['NHYDRO_VARIABLES'] = str(4 + ngas + ncloud)
 
 # --flux=[name] argument
 definitions['RSOLVER'] = makefile_options['RSOLVER_FILE'] = args['flux']
@@ -316,7 +323,7 @@ else:
   definitions['MAGNETIC_FIELDS_ENABLED'] = '0'
   makefile_options['EOS_FILE'] += '_hydro'
   definitions['NFIELD_VARIABLES'] = '0'
-  if args['eos'] == 'shallow_water':
+  if args['eos'] == 'shallow_water' or args['eos'] == 'heterogeneous':
     makefile_options['RSOLVER_DIR'] = './'
   else:
     makefile_options['RSOLVER_DIR'] = 'hydro/'
@@ -327,6 +334,9 @@ else:
   elif args['eos'] == 'shallow_water':
     definitions['NWAVE_VALUE'] = '4'
     makefile_options['RSOLVER_FILE'] += '_shallow_water'
+  elif args['eos'] == 'heterogeneous':
+    definitions['NWAVE_VALUE'] = str(ngas + ncloud + 5)
+    makefile_options['RSOLVER_FILE'] += '_heterogeneous'
 
 # -s, -g, and -t arguments
 definitions['RELATIVISTIC_DYNAMICS'] = '1' if args['s'] or args['g'] else '0'

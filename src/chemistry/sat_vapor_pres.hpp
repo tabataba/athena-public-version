@@ -1,5 +1,5 @@
-#ifndef FUNC_SAT_VAPOR_PRES_HPP_
-#define FUNC_SAT_VAPOR_PRES_HPP_
+#ifndef SAT_VAPOR_PRES_HPP_
+#define SAT_VAPOR_PRES_HPP_
 
 // C++ header
 #include <cmath>
