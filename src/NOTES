@@ -329,3 +329,12 @@ is initialized
 Send particle has two steps. One is to send the number of particles. status is
 BNDRY_INIT. The other is the real data. status is BNDRY_WAITING
 4) using MPI_Send_init for particle_num_send_, MPI_Isend for particle_send
+
+- 5/31/2017
+NHYDRO is the number of conserved hydrodynamic variables.
+It is used to allocate arrays in Hydro::u,u1, Hydro::w,w1
+If heterogeneous eos is used, the first primitive variable is T. The second through the
+NCOMP - 1 variables are the mixing ratio. The following three are velocities. The last
+one is P. It makes sense because T is usually an indication of density.
+NWAVE is the dimension of primitive variables.
+if hydro only, NWAVE = NHYDRO

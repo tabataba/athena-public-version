@@ -25,103 +25,105 @@ void Reconstruction::HighResFuncX1(const int k, const int j,
 {
   Coordinates *pco = pmy_block_->pcoord;
   Real dql,dqr,dqc,q_im1,q_i;
-  for (int n=0; n<NWAVE; ++n) {
-    if (n==NHYDRO){
+  for (int n=0; n<NHYDRO; ++n) {
 #pragma simd
-      for (int i=il; i<=iu; ++i){
-        Real& dx_im2 = pco->dx1v(i-2);
-        Real& dx_im1 = pco->dx1v(i-1);
-        Real& dx_i   = pco->dx1v(i);
+    for (int i=il; i<=iu; ++i){
+      Real& dx_im2 = pco->dx1v(i-2);
+      Real& dx_im1 = pco->dx1v(i-1);
+      Real& dx_i   = pco->dx1v(i);
 
-        q_im1 = bcc(IB2,k,j,i-1);
-        q_i   = bcc(IB2,k,j,i  );
-        dql = (bcc(IB2,k,j,i-1) - bcc(IB2,k,j,i-2))/dx_im2;
-        dqc = (bcc(IB2,k,j,i  ) - bcc(IB2,k,j,i-1))/dx_im1;
-        dqr = (bcc(IB2,k,j,i+1) - bcc(IB2,k,j,i  ))/dx_i;
-        // compute ql_(i-1/2) using Mignone 2014's modified van-Leer limiter
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_im1;
-        if(dq2>0.0) {
-          Real dxfr=pco->x1f(i)-pco->x1v(i-1);
-          Real cf=dx_im1/dxfr;
-          Real cb=dx_im2/(pco->x1v(i-1)-pco->x1f(i-1));
-          ql(n,i) += dxfr*dq2*(cf*dql+cb*dqc)/(dql*dql+(cf+cb-2.0)*dq2+dqc*dqc);
-        }
-
-        // compute qr_(i-1/2) using Mignone 2014's modified van-Leer limiter
-        dq2 = dqc*dqr;
-        qr(n,i) = q_i;
-        if(dq2>0.0) {
-          Real dxfl=pco->x1v(i)-pco->x1f(i);
-          Real cf=dx_i/(pco->x1f(i+1)-pco->x1v(i));
-          Real cb=dx_im1/dxfl;
-          qr(n,i) -= dxfl*dq2*(cf*dqc+cb*dqr)/(dqc*dqc+(cf+cb-2.0)*dq2+dqr*dqr);
-        }
+      q_im1 = q(n,k,j,i-1);
+      q_i   = q(n,k,j,i  );
+      dql = (q(n,k,j,i-1) - q(n,k,j,i-2))/dx_im2;
+      dqc = (q(n,k,j,i  ) - q(n,k,j,i-1))/dx_im1;
+      dqr = (q(n,k,j,i+1) - q(n,k,j,i  ))/dx_i;
+      // compute ql_(i-1/2) using Mignone 2014's modified van-Leer limiter
+      Real dq2 = dql*dqc;
+      ql(n,i) = q_im1;
+      if(dq2>0.0) {
+        Real dxfr=pco->x1f(i)-pco->x1v(i-1);
+        Real cf=dx_im1/dxfr;
+        Real cb=dx_im2/(pco->x1v(i-1)-pco->x1f(i-1));
+        ql(n,i) += dxfr*dq2*(cf*dql+cb*dqc)/(dql*dql+(cf+cb-2.0)*dq2+dqc*dqc);
       }
-    } else if (n==(NHYDRO+1)) {
+
+      // compute qr_(i-1/2) using Mignone 2014's modified van-Leer limiter
+      dq2 = dqc*dqr;
+      qr(n,i) = q_i;
+      if(dq2>0.0) {
+        Real dxfl=pco->x1v(i)-pco->x1f(i);
+        Real cf=dx_i/(pco->x1f(i+1)-pco->x1v(i));
+        Real cb=dx_im1/dxfl;
+        qr(n,i) -= dxfl*dq2*(cf*dqc+cb*dqr)/(dqc*dqc+(cf+cb-2.0)*dq2+dqr*dqr);
+      }
+    }
+  }
+
+  if (NFIELD == 0) return;
+
+  int n = IBY;
 #pragma simd
-      for (int i=il; i<=iu; ++i){
-        Real& dx_im2 = pco->dx1v(i-2);
-        Real& dx_im1 = pco->dx1v(i-1);
-        Real& dx_i   = pco->dx1v(i);
+  for (int i=il; i<=iu; ++i){
+    Real& dx_im2 = pco->dx1v(i-2);
+    Real& dx_im1 = pco->dx1v(i-1);
+    Real& dx_i   = pco->dx1v(i);
 
-        q_im1 = bcc(IB3,k,j,i-1);
-        q_i   = bcc(IB3,k,j,i  );
-        dql = (bcc(IB3,k,j,i-1) - bcc(IB3,k,j,i-2))/dx_im2;
-        dqc = (bcc(IB3,k,j,i  ) - bcc(IB3,k,j,i-1))/dx_im1;
-        dqr = (bcc(IB3,k,j,i+1) - bcc(IB3,k,j,i  ))/dx_i;
-        // compute ql_(i-1/2) using Mignone 2014's modified van-Leer limiter
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_im1;
-        if(dq2>0.0) {
-          Real dxfr=pco->x1f(i)-pco->x1v(i-1);
-          Real cf=dx_im1/dxfr;
-          Real cb=dx_im2/(pco->x1v(i-1)-pco->x1f(i-1));
-          ql(n,i) += dxfr*dq2*(cf*dql+cb*dqc)/(dql*dql+(cf+cb-2.0)*dq2+dqc*dqc);
-        }
+    q_im1 = bcc(IB2,k,j,i-1);
+    q_i   = bcc(IB2,k,j,i  );
+    dql = (bcc(IB2,k,j,i-1) - bcc(IB2,k,j,i-2))/dx_im2;
+    dqc = (bcc(IB2,k,j,i  ) - bcc(IB2,k,j,i-1))/dx_im1;
+    dqr = (bcc(IB2,k,j,i+1) - bcc(IB2,k,j,i  ))/dx_i;
+    // compute ql_(i-1/2) using Mignone 2014's modified van-Leer limiter
+    Real dq2 = dql*dqc;
+    ql(n,i) = q_im1;
+    if(dq2>0.0) {
+      Real dxfr=pco->x1f(i)-pco->x1v(i-1);
+      Real cf=dx_im1/dxfr;
+      Real cb=dx_im2/(pco->x1v(i-1)-pco->x1f(i-1));
+      ql(n,i) += dxfr*dq2*(cf*dql+cb*dqc)/(dql*dql+(cf+cb-2.0)*dq2+dqc*dqc);
+    }
 
-        // compute qr_(i-1/2) using Mignone 2014's modified van-Leer limiter
-        dq2 = dqc*dqr;
-        qr(n,i) = q_i;
-        if(dq2>0.0) {
-          Real dxfl=pco->x1v(i)-pco->x1f(i);
-          Real cf=dx_i/(pco->x1f(i+1)-pco->x1v(i));
-          Real cb=dx_im1/dxfl;
-          qr(n,i) -= dxfl*dq2*(cf*dqc+cb*dqr)/(dqc*dqc+(cf+cb-2.0)*dq2+dqr*dqr);
-        }
-      }
-    } else {
+    // compute qr_(i-1/2) using Mignone 2014's modified van-Leer limiter
+    dq2 = dqc*dqr;
+    qr(n,i) = q_i;
+    if(dq2>0.0) {
+      Real dxfl=pco->x1v(i)-pco->x1f(i);
+      Real cf=dx_i/(pco->x1f(i+1)-pco->x1v(i));
+      Real cb=dx_im1/dxfl;
+      qr(n,i) -= dxfl*dq2*(cf*dqc+cb*dqr)/(dqc*dqc+(cf+cb-2.0)*dq2+dqr*dqr);
+    }
+  }
+
+  n = IBZ;
 #pragma simd
-      for (int i=il; i<=iu; ++i){
-        Real& dx_im2 = pco->dx1v(i-2);
-        Real& dx_im1 = pco->dx1v(i-1);
-        Real& dx_i   = pco->dx1v(i);
+  for (int i=il; i<=iu; ++i){
+    Real& dx_im2 = pco->dx1v(i-2);
+    Real& dx_im1 = pco->dx1v(i-1);
+    Real& dx_i   = pco->dx1v(i);
 
-        q_im1 = q(n,k,j,i-1);
-        q_i   = q(n,k,j,i  );
-        dql = (q(n,k,j,i-1) - q(n,k,j,i-2))/dx_im2;
-        dqc = (q(n,k,j,i  ) - q(n,k,j,i-1))/dx_im1;
-        dqr = (q(n,k,j,i+1) - q(n,k,j,i  ))/dx_i;
-        // compute ql_(i-1/2) using Mignone 2014's modified van-Leer limiter
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_im1;
-        if(dq2>0.0) {
-          Real dxfr=pco->x1f(i)-pco->x1v(i-1);
-          Real cf=dx_im1/dxfr;
-          Real cb=dx_im2/(pco->x1v(i-1)-pco->x1f(i-1));
-          ql(n,i) += dxfr*dq2*(cf*dql+cb*dqc)/(dql*dql+(cf+cb-2.0)*dq2+dqc*dqc);
-        }
+    q_im1 = bcc(IB3,k,j,i-1);
+    q_i   = bcc(IB3,k,j,i  );
+    dql = (bcc(IB3,k,j,i-1) - bcc(IB3,k,j,i-2))/dx_im2;
+    dqc = (bcc(IB3,k,j,i  ) - bcc(IB3,k,j,i-1))/dx_im1;
+    dqr = (bcc(IB3,k,j,i+1) - bcc(IB3,k,j,i  ))/dx_i;
+    // compute ql_(i-1/2) using Mignone 2014's modified van-Leer limiter
+    Real dq2 = dql*dqc;
+    ql(n,i) = q_im1;
+    if(dq2>0.0) {
+      Real dxfr=pco->x1f(i)-pco->x1v(i-1);
+      Real cf=dx_im1/dxfr;
+      Real cb=dx_im2/(pco->x1v(i-1)-pco->x1f(i-1));
+      ql(n,i) += dxfr*dq2*(cf*dql+cb*dqc)/(dql*dql+(cf+cb-2.0)*dq2+dqc*dqc);
+    }
 
-        // compute qr_(i-1/2) using Mignone 2014's modified van-Leer limiter
-        dq2 = dqc*dqr;
-        qr(n,i) = q_i;
-        if(dq2>0.0) {
-          Real dxfl=pco->x1v(i)-pco->x1f(i);
-          Real cf=dx_i/(pco->x1f(i+1)-pco->x1v(i));
-          Real cb=dx_im1/dxfl;
-          qr(n,i) -= dxfl*dq2*(cf*dqc+cb*dqr)/(dqc*dqc+(cf+cb-2.0)*dq2+dqr*dqr);
-        }
-      }
+    // compute qr_(i-1/2) using Mignone 2014's modified van-Leer limiter
+    dq2 = dqc*dqr;
+    qr(n,i) = q_i;
+    if(dq2>0.0) {
+      Real dxfl=pco->x1v(i)-pco->x1f(i);
+      Real cf=dx_i/(pco->x1f(i+1)-pco->x1v(i));
+      Real cb=dx_im1/dxfl;
+      qr(n,i) -= dxfl*dq2*(cf*dqc+cb*dqr)/(dqc*dqc+(cf+cb-2.0)*dq2+dqr*dqr);
     }
   }
 
@@ -149,69 +151,71 @@ void Reconstruction::HighResFuncX2(const int k, const int j,
   Real cbp=pco->dx2v(j-1)/dxfl;
   Real dql,dqr,dqc,q_jm1,q_j;
 
-  for (int n=0; n<NWAVE; ++n) {
-    if (n==NHYDRO){
+  for (int n=0; n<NHYDRO; ++n) {
 #pragma simd
-      for (int i=il; i<=iu; ++i){
-        q_jm1 = bcc(IB3,k,j-1,i);
-        q_j   = bcc(IB3,k,j  ,i);
-        dql = (bcc(IB3,k,j-1,i) - bcc(IB3,k,j-2,i))*dx2jm2i;
-        dqc = (bcc(IB3,k,j  ,i) - bcc(IB3,k,j-1,i))*dx2jm1i;
-        dqr = (bcc(IB3,k,j+1,i) - bcc(IB3,k,j  ,i))*dx2ji;
-        // Apply monotonicity constraints, compute ql_(i-1/2)
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_jm1;
-        if(dq2>0.0)
-          ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
-        
-        // Apply monotonicity constraints, compute qr_(i-1/2)
-        dq2 = dqc*dqr;
-        qr(n,i) = q_j;
-        if(dq2>0.0)
-          qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
-      }
-    } else if (n==(NHYDRO+1)) {
-#pragma simd
-      for (int i=il; i<=iu; ++i){
-        q_jm1 = bcc(IB1,k,j-1,i);
-        q_j   = bcc(IB1,k,j  ,i);
-        dql = (bcc(IB1,k,j-1,i) - bcc(IB1,k,j-2,i))*dx2jm2i;
-        dqc = (bcc(IB1,k,j  ,i) - bcc(IB1,k,j-1,i))*dx2jm1i;
-        dqr = (bcc(IB1,k,j+1,i) - bcc(IB1,k,j  ,i))*dx2ji;
-        // Apply monotonicity constraints, compute ql_(i-1/2)
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_jm1;
-        if(dq2>0.0)
-          ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
-        
-        // Apply monotonicity constraints, compute qr_(i-1/2)
-        dq2 = dqc*dqr;
-        qr(n,i) = q_j;
-        if(dq2>0.0)
-          qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
-      }
-    } else {
-#pragma simd
-      for (int i=il; i<=iu; ++i){
-        q_jm1 = q(n,k,j-1,i);
-        q_j   = q(n,k,j  ,i);
-        dql = (q(n,k,j-1,i) - q(n,k,j-2,i))*dx2jm2i;
-        dqc = (q(n,k,j  ,i) - q(n,k,j-1,i))*dx2jm1i;
-        dqr = (q(n,k,j+1,i) - q(n,k,j  ,i))*dx2ji;
+    for (int i=il; i<=iu; ++i){
+      q_jm1 = q(n,k,j-1,i);
+      q_j   = q(n,k,j  ,i);
+      dql = (q(n,k,j-1,i) - q(n,k,j-2,i))*dx2jm2i;
+      dqc = (q(n,k,j  ,i) - q(n,k,j-1,i))*dx2jm1i;
+      dqr = (q(n,k,j+1,i) - q(n,k,j  ,i))*dx2ji;
 
-        // Apply monotonicity constraints, compute ql_(i-1/2)
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_jm1;
-        if(dq2>0.0)
-          ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
-        
-        // Apply monotonicity constraints, compute qr_(i-1/2)
-        dq2 = dqc*dqr;
-        qr(n,i) = q_j;
-        if(dq2>0.0)
-          qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
-      }
+      // Apply monotonicity constraints, compute ql_(i-1/2)
+      Real dq2 = dql*dqc;
+      ql(n,i) = q_jm1;
+      if(dq2>0.0)
+        ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
+      
+      // Apply monotonicity constraints, compute qr_(i-1/2)
+      dq2 = dqc*dqr;
+      qr(n,i) = q_j;
+      if(dq2>0.0)
+        qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
     }
+  }
+
+  if (NFIELD == 0) return;
+
+  int n = IBY;
+#pragma simd
+  for (int i=il; i<=iu; ++i){
+    q_jm1 = bcc(IB3,k,j-1,i);
+    q_j   = bcc(IB3,k,j  ,i);
+    dql = (bcc(IB3,k,j-1,i) - bcc(IB3,k,j-2,i))*dx2jm2i;
+    dqc = (bcc(IB3,k,j  ,i) - bcc(IB3,k,j-1,i))*dx2jm1i;
+    dqr = (bcc(IB3,k,j+1,i) - bcc(IB3,k,j  ,i))*dx2ji;
+    // Apply monotonicity constraints, compute ql_(i-1/2)
+    Real dq2 = dql*dqc;
+    ql(n,i) = q_jm1;
+    if(dq2>0.0)
+      ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
+    
+    // Apply monotonicity constraints, compute qr_(i-1/2)
+    dq2 = dqc*dqr;
+    qr(n,i) = q_j;
+    if(dq2>0.0)
+      qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
+  }
+
+  n = IBZ;
+#pragma simd
+  for (int i=il; i<=iu; ++i){
+    q_jm1 = bcc(IB1,k,j-1,i);
+    q_j   = bcc(IB1,k,j  ,i);
+    dql = (bcc(IB1,k,j-1,i) - bcc(IB1,k,j-2,i))*dx2jm2i;
+    dqc = (bcc(IB1,k,j  ,i) - bcc(IB1,k,j-1,i))*dx2jm1i;
+    dqr = (bcc(IB1,k,j+1,i) - bcc(IB1,k,j  ,i))*dx2ji;
+    // Apply monotonicity constraints, compute ql_(i-1/2)
+    Real dq2 = dql*dqc;
+    ql(n,i) = q_jm1;
+    if(dq2>0.0)
+      ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
+    
+    // Apply monotonicity constraints, compute qr_(i-1/2)
+    dq2 = dqc*dqr;
+    qr(n,i) = q_j;
+    if(dq2>0.0)
+      qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
   }
 
   return;
@@ -238,71 +242,73 @@ void Reconstruction::HighResFuncX3(const int k, const int j,
   Real cbp=pco->dx3v(k-1)/dxfl;
   Real dql,dqr,dqc,q_km1,q_k;
 
-  for (int n=0; n<NWAVE; ++n) {
-    if (n==NHYDRO){
+  for (int n=0; n<NHYDRO; ++n) {
 #pragma simd
-      for (int i=il; i<=iu; ++i){
-        q_km1 = bcc(IB1,k-1,j,i);
-        q_k   = bcc(IB1,k  ,j,i);
-        dql = (bcc(IB1,k-1,j,i) - bcc(IB1,k-2,j,i))*dx3km2i;
-        dqc = (bcc(IB1,k  ,j,i) - bcc(IB1,k-1,j,i))*dx3km1i;
-        dqr = (bcc(IB1,k+1,j,i) - bcc(IB1,k  ,j,i))*dx3ki;
+    for (int i=il; i<=iu; ++i){
+      q_km1 = q(n,k-1,j,i);
+      q_k   = q(n,k  ,j,i);
+      dql = (q(n,k-1,j,i) - q(n,k-2,j,i))*dx3km2i;
+      dqc = (q(n,k  ,j,i) - q(n,k-1,j,i))*dx3km1i;
+      dqr = (q(n,k+1,j,i) - q(n,k  ,j,i))*dx3ki;
 
-        // Apply monotonicity constraints, compute ql_(i-1/2)
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_km1;
-        if(dq2>0.0)
-          ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
-      
-        // Apply monotonicity constraints, compute qr_(i-1/2)
-        dq2 = dqc*dqr;
-        qr(n,i) = q_k;
-        if(dq2>0.0)
-          qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
-      }
-    } else if (n==(NHYDRO+1)) {
-#pragma simd
-      for (int i=il; i<=iu; ++i){
-        q_km1 = bcc(IB2,k-1,j,i);
-        q_k   = bcc(IB2,k  ,j,i);
-        dql = (bcc(IB2,k-1,j,i) - bcc(IB2,k-2,j,i))*dx3km2i;
-        dqc = (bcc(IB2,k  ,j,i) - bcc(IB2,k-1,j,i))*dx3km1i;
-        dqr = (bcc(IB2,k+1,j,i) - bcc(IB2,k  ,j,i))*dx3ki;
-
-        // Apply monotonicity constraints, compute ql_(i-1/2)
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_km1;
-        if(dq2>0.0)
-          ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
-      
-        // Apply monotonicity constraints, compute qr_(i-1/2)
-        dq2 = dqc*dqr;
-        qr(n,i) = q_k;
-        if(dq2>0.0)
-          qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
-      }
-    } else {
-#pragma simd
-      for (int i=il; i<=iu; ++i){
-        q_km1 = q(n,k-1,j,i);
-        q_k   = q(n,k  ,j,i);
-        dql = (q(n,k-1,j,i) - q(n,k-2,j,i))*dx3km2i;
-        dqc = (q(n,k  ,j,i) - q(n,k-1,j,i))*dx3km1i;
-        dqr = (q(n,k+1,j,i) - q(n,k  ,j,i))*dx3ki;
-
-        // Apply monotonicity constraints, compute ql_(i-1/2)
-        Real dq2 = dql*dqc;
-        ql(n,i) = q_km1;
-        if(dq2>0.0)
-          ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
-      
-        // Apply monotonicity constraints, compute qr_(i-1/2)
-        dq2 = dqc*dqr;
-        qr(n,i) = q_k;
-        if(dq2>0.0)
-          qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
-      }
+      // Apply monotonicity constraints, compute ql_(i-1/2)
+      Real dq2 = dql*dqc;
+      ql(n,i) = q_km1;
+      if(dq2>0.0)
+        ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
+    
+      // Apply monotonicity constraints, compute qr_(i-1/2)
+      dq2 = dqc*dqr;
+      qr(n,i) = q_k;
+      if(dq2>0.0)
+        qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
     }
+  }
+
+  if (NFIELD == 0) return;
+
+  int n = IBY;
+#pragma simd
+  for (int i=il; i<=iu; ++i){
+    q_km1 = bcc(IB1,k-1,j,i);
+    q_k   = bcc(IB1,k  ,j,i);
+    dql = (bcc(IB1,k-1,j,i) - bcc(IB1,k-2,j,i))*dx3km2i;
+    dqc = (bcc(IB1,k  ,j,i) - bcc(IB1,k-1,j,i))*dx3km1i;
+    dqr = (bcc(IB1,k+1,j,i) - bcc(IB1,k  ,j,i))*dx3ki;
+
+    // Apply monotonicity constraints, compute ql_(i-1/2)
+    Real dq2 = dql*dqc;
+    ql(n,i) = q_km1;
+    if(dq2>0.0)
+      ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
+  
+    // Apply monotonicity constraints, compute qr_(i-1/2)
+    dq2 = dqc*dqr;
+    qr(n,i) = q_k;
+    if(dq2>0.0)
+      qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
+  }
+
+  n = IBZ;
+#pragma simd
+  for (int i=il; i<=iu; ++i){
+    q_km1 = bcc(IB2,k-1,j,i);
+    q_k   = bcc(IB2,k  ,j,i);
+    dql = (bcc(IB2,k-1,j,i) - bcc(IB2,k-2,j,i))*dx3km2i;
+    dqc = (bcc(IB2,k  ,j,i) - bcc(IB2,k-1,j,i))*dx3km1i;
+    dqr = (bcc(IB2,k+1,j,i) - bcc(IB2,k  ,j,i))*dx3ki;
+
+    // Apply monotonicity constraints, compute ql_(i-1/2)
+    Real dq2 = dql*dqc;
+    ql(n,i) = q_km1;
+    if(dq2>0.0)
+      ql(n,i) += dxfr*dq2*(cfm*dql+cbm*dqc)/(dql*dql+(cfm+cbm-2.0)*dq2+dqc*dqc);
+  
+    // Apply monotonicity constraints, compute qr_(i-1/2)
+    dq2 = dqc*dqr;
+    qr(n,i) = q_k;
+    if(dq2>0.0)
+      qr(n,i) -= dxfl*dq2*(cfp*dqc+cbp*dqr)/(dqc*dqc+(cfp+cbp-2.0)*dq2+dqr*dqr);
   }
 
   return;

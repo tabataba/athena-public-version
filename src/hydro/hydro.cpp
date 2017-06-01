@@ -29,11 +29,11 @@ Hydro::Hydro(MeshBlock *pmb, ParameterInput *pin)
   if (pmy_block->block_size.nx3 > 1) ncells3 = pmy_block->block_size.nx3 + 2*(NGHOST);
 
   u.NewAthenaArray(NHYDRO,ncells3,ncells2,ncells1);
-  w.NewAthenaArray(NHYDRO+1,ncells3,ncells2,ncells1);
+  w.NewAthenaArray(NHYDRO,ncells3,ncells2,ncells1);
 
   // Allocate memory for primitive/conserved variables at intermediate-time step
   u1.NewAthenaArray(NHYDRO,ncells3,ncells2,ncells1);
-  w1.NewAthenaArray(NHYDRO+1,ncells3,ncells2,ncells1);
+  w1.NewAthenaArray(NHYDRO,ncells3,ncells2,ncells1);
 
   flux[X1DIR].NewAthenaArray(NHYDRO,ncells3,ncells2,ncells1+1);
   if (pmy_block->block_size.nx2 > 1) 

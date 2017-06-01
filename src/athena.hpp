@@ -48,8 +48,8 @@ enum {IDN=0, IM1=1, IM2=2, IM3=3, IEN=4};
 enum {IB1=0, IB2=1, IB3=2};
 
 // array indices for 1D primitives: velocity, transverse components of field
-enum {IVX=(NCOMP), IVY=(NCOMP)+1, IVZ=(NCOMP)+2, IPR=(NCOMP)+3, IT=(NCOMP)+4,
-  IBY=(NHYDRO)+1, IBZ=((NHYDRO)+2)};
+enum {IT=0,IVX=(NCOMP), IVY=(NCOMP)+1, IVZ=(NCOMP)+2, IPR=(NCOMP)+3,
+  IBY=(NHYDRO), IBZ=((NHYDRO)+1)};
 
 // array indices for face-centered electric fields returned by Riemann solver
 enum {X1E2=0, X1E3=1, X2E3=0, X2E1=1, X3E1=0, X3E2=1};

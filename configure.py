@@ -335,7 +335,7 @@ else:
     definitions['NWAVE_VALUE'] = '4'
     makefile_options['RSOLVER_FILE'] += '_shallow_water'
   elif args['eos'] == 'heterogeneous':
-    definitions['NWAVE_VALUE'] = str(ngas + ncloud + 5)
+    definitions['NWAVE_VALUE'] = str(ngas + ncloud + 4)
     makefile_options['RSOLVER_FILE'] += '_heterogeneous'
 
 # -s, -g, and -t arguments

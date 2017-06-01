@@ -18,8 +18,8 @@ void GasGasSolidNH4SH(MeshBlock *pmb, Real const time, Reaction const& rc,
       Real xh2s = prim(rc.reactor[1],k,j,i);
       Real xnh4sh = prim(rc.reactor[2],k,j,i);
       Real s = SatVaporPresNH4SHLewis(prim(IT,k,j,i))/_sqr(prim(IPR,k,j,i));
-      Real xt = 0.;
-      for (int g = 0; g < NGAS; ++g) xt += prim(g,k,j,i);
+      Real xt = 1.;
+      for (int g = NGAS; g < NCOMP; ++g) xt -= prim(g,k,j,i);
       rate(r,k,j,i) = (xnh3+xh2s-4.*s*xt-sqrt(_sqr(xnh3-xh2s)+4.*s*(xt-2.*xnh3)*(xt-2.*xh2s)))/(2.*(1.-4.*s));
       if (rate(r,k,j,i) < 0.) rate(r,k,j,i) = _max(rate(r,k,j,i), -xnh4sh);
     }
@@ -39,8 +39,8 @@ void GasCloudIdeal(MeshBlock *pmb, Real const time, Reaction const& rc,
       Real xc = prim(rc.reactor[1],k,j,i);
       Real temp = prim(IT,k,j,i);
       Real s = SatVaporPresIdeal(temp/tr,pr,beta,gamma)/prim(IPR,k,j,i);
-      Real xt = 0.;
-      for (int g = 0; g < NGAS; ++g) xt += prim(g,k,j,i);
+      Real xt = 1.;
+      for (int g = NGAS; g < NCOMP; ++g) xt -= prim(g,k,j,i);
       rate(r,k,j,i) = (x1-s*xt)/(1.-s);
       if (rate(r,k,j,i) < 0.) rate(r,k,j,i) = _max(rate(r,k,j,i), -xc);
     }
