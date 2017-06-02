@@ -40,9 +40,10 @@ ix3_bc      = periodic  # Inner-X3 boundary condition flag
 ox3_bc      = periodic  # Outer-X3 boundary condition flag
 
 <hydro>
-gamma       = 1.4 1.4 1.4 1.4 1.4 1.4 1.4
-# heat capacity and latent heat in J/g
-cv          = 14.6 5.2 2.2 1.1 2.1 1.8 1.0 0. 0. 0. 0. 0.
+gamma       = 1.4  1.4 1.4 1.4 1.4 1.4 1.4 1.4 1.4 1.4 1.4 1.4
+# heat capacity [J/(g K)]
+cv          = 14.6 5.2 2.2 1.1 2.1 1.8 1.0 2.1 2.1 1.8 1.8 3.1
+# latent heat [J/g]
 latent      = -1800. -1382. -2833. -2500. -2547.
 
 <chemistry>

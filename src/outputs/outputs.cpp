@@ -366,6 +366,18 @@ void OutputType::LoadOutputData(MeshBlock *pmb)
     }
   }
 
+  // hydro components
+  if (NCOMP > 1) {
+    if (output_params.variable.compare("prim") == 0) {
+      pod = new OutputData;
+      pod->type = "VECTORS";
+      pod->name = "components";
+      pod->data.InitWithShallowSlice(phyd->w,4,1,NCOMP-1);
+      AppendOutputDataNode(pod);
+      num_vars_+=NCOMP-1;
+    }
+  }
+
   // momentum vector
   if (output_params.variable.compare("m") == 0 || 
       output_params.variable.compare("cons") == 0) {

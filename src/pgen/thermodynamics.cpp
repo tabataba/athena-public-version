@@ -66,7 +66,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         phydro->w(IT,k,j,i) = 300.;
         for (int c = 1; c < NCOMP; ++c)
           phydro->w(c,k,j,i) = mixr[c]/tmols;
-        phydro->w(IVX,k,j,i) = 1.;
+        phydro->w(IVX,k,j,i) = 0.;
         phydro->w(IVY,k,j,i) = 0.;
         phydro->w(IVZ,k,j,i) = 0.;
         phydro->w(IPR,k,j,i) = pcoord->x1v(i);

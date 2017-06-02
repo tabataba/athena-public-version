@@ -31,16 +31,14 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
 
   pmy_block_ = pmb;
   std::vector<std::string> str;
-  // read gamma, size should be NGAS
+  // read gamma, size should be NCOMP
   SplitString(pin->GetString("hydro", "gamma"), str);
-  if (str.size() != NGAS) {
+  if (str.size() != NCOMP) {
     msg << "### FATAL ERROR in heterogeneous_hydro.cpp::EquationOfState: number of gases in 'gamma' does not equal NGAS" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
-  for (int i = 0; i < NGAS; ++i)
+  for (int i = 0; i < NCOMP; ++i)
     kappa_[i] = atof(str[i].c_str()) - 1.;
-  for (int i = NGAS; i < NCOMP; ++i)
-    kappa_[i] = 0.;
 
   // read cv, size should be NCOMP, unit is [J/g], convert to [J/kg]
   SplitString(pin->GetString("hydro", "cv"), str);
@@ -64,7 +62,8 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
   for (int i = NGAS; i < NCOMP; ++i)
     latent_[i] = atof(str[i].c_str())*1000.;
 
-  density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
+  //density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
+  density_floor_  = 0.;
   pressure_floor_ = pin->GetOrAddReal("hydro","pfloor",(1024*(FLT_MIN)));
 }
 
@@ -111,6 +110,10 @@ void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
       for (int c = 0; c < NCOMP; ++c)
         prim(c,k,j,i) = cons(c,k,j,i)*cv_[c]*kappa_[c]/rck;
 
+      // subtract cloud components when calculate pressure
+      for (int c = NGAS; c < NCOMP; ++c)
+        rck -= cons(c,k,j,i)*cv_[c]*kappa_[c];
+
       // apply pressure floor, correct total energy
       prim(IPR,k,j,i) = rck/rc*(cons(IEN,k,j,i)-0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3)));
       cons(IEN,k,j,i) = (prim(IPR,k,j,i) > pressure_floor_) ?  cons(IEN,k,j,i) :
@@ -145,6 +148,8 @@ void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
   int nthreads = pmy_block_->pmy_mesh->GetNumMeshThreads();
 #pragma omp parallel default(shared) num_threads(nthreads)
 {
+  Real mixr[NGAS];
+
   for (int k=ks; k<=ke; ++k){
 #pragma omp for schedule(dynamic)
   for (int j=js; j<=je; ++j){
@@ -154,17 +159,29 @@ void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
       Real const& v2 = prim(IVY,k,j,i);
       Real const& v3 = prim(IVZ,k,j,i);
 
-      // density
+      // total gas mixing ratios
+      Real xt = 1.;
+      for (int c = NGAS; c < NCOMP; ++c)
+        xt -= prim(c,k,j,i);
+
+      // gas density
       Real x1 = 0., rho = 0., rc = 0.;
-      for (int c = 1; c < NCOMP; ++c) {
-        cons(c,k,j,i) = prim(c,k,j,i)*prim(IPR,k,j,i)/(cv_[c]*kappa_[c]*prim(IT,k,j,i));
+      for (int c = 1; c < NGAS; ++c) {
+        cons(c,k,j,i) = prim(c,k,j,i)/xt*prim(IPR,k,j,i)/(cv_[c]*kappa_[c]*prim(IT,k,j,i));
         x1 += prim(c,k,j,i);
         rho += cons(c,k,j,i);
         rc += cons(c,k,j,i)*cv_[c];
       }
-      cons(0,k,j,i) = (1.-x1)*prim(IPR,k,j,i)/(cv_[0]*kappa_[0]*prim(IT,k,j,i));
+      cons(0,k,j,i) = (xt-x1)/xt*prim(IPR,k,j,i)/(cv_[0]*kappa_[0]*prim(IT,k,j,i));
       rho += cons(0,k,j,i);
       rc += cons(0,k,j,i)*cv_[0];
+
+      // cloud density
+      for (int c = NGAS; c < NCOMP; ++c) {
+        cons(c,k,j,i) = prim(c,k,j,i)*cv_[0]*kappa_[0]/((xt-x1)*cv_[c]*kappa_[c])*cons(0,k,j,i);
+        rho += cons(c,k,j,i);
+        rc += cons(c,k,j,i)*cv_[c];
+      }
 
       // momentum
       cons(IM1,k,j,i) = rho*v1;
