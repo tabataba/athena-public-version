@@ -8,11 +8,11 @@ class MeshBlock;
 template<typename T> class AthenaArray;
 
 void GasGasSolidNH4SH(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, int i, AthenaArray<Real>& rate, int r);
+  AthenaArray<Real> const& prim, int i1, int i2, AthenaArray<Real>& rate, int r);
 
 void GasCloudIdeal(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, int i, AthenaArray<Real>& rate, int r);
+  AthenaArray<Real> const& prim, int i1, int i2, AthenaArray<Real>& rate, int r);
 void LiquidSolidIdeal(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, int i, AthenaArray<Real>& rate, int r);
+  AthenaArray<Real> const& prim, int i1, int i2, AthenaArray<Real>& rate, int r);
 
 #endif

@@ -19,7 +19,6 @@ struct Reaction {
   std::string name, tag, comment;
   int reactor[NREACTOR];
   Real measure[NREACTOR];
-  ReactionFunc_t pfunc;
   std::vector<Real> coeff;
 
   Reaction();
@@ -44,15 +43,19 @@ public:
   AthenaArray<Real> rate;
 
   // functions
-  ReactionGroup* AddReactionGroup(MeshBlock *pmb, std::string name);
+  ReactionGroup* AddReactionGroup(std::string name);
   ReactionGroup* AddReaction(ParameterInput *pin, std::string block,
-    std::string tag_, Molecule *pmol, ReactionFunc_t pfunc_);
-  std::vector<Reaction>& GetReactions(std::string name);
-  std::vector<Reaction> const& GetReactions(std::string name) const;
-  void SetReactionRateArray();
+    std::string tag, Molecule *pmol, ReactionFunc_t pfunc_);
+  ReactionGroup* GetReactionGroup(std::string name);
+  int FindReactionId(std::string tag) const;
+  void SetReactionFunction(int i, ReactionFunc_t pfunc);
+  void InitReactionRateArray();
+  void CalculateReactionRates(AthenaArray<Real> const& prim, int i1, int i2, Real time);
 
 protected:
-  std::vector<Reaction> q;
+  bool initialized_; // no more reactions after InitReactionRateArray;
+  std::vector<ReactionFunc_t> fns_;
+  std::vector<Reaction> rts_;
 };
 
 #endif

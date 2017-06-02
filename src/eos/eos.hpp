@@ -104,6 +104,7 @@ public:
 private:
   MeshBlock *pmy_block_;                 // ptr to MeshBlock containing this EOS
   Real iso_sound_speed_, gamma_;         // isothermal Cs, ratio of specific heats
+  Real cv_[NCOMP], latent_[NCOMP], kappa_[NCOMP]; // heat capacity, latent heat and R/cv
   Real density_floor_, pressure_floor_;  // density and pressure floors
   Real sigma_max_, beta_min_;            // limits on ratios of gas quantities to pmag
   Real gamma_max_;                       // maximum Lorentz factor

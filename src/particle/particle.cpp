@@ -151,7 +151,7 @@ ParticleGroup::~ParticleGroup()
 }
 
 // functions
-ParticleGroup* ParticleGroup::AddParticleGroup(MeshBlock *pmb, std::string name)
+ParticleGroup* ParticleGroup::AddParticleGroup(std::string name)
 {
   std::stringstream msg;
   ParticleGroup *p = this;
@@ -160,7 +160,7 @@ ParticleGroup* ParticleGroup::AddParticleGroup(MeshBlock *pmb, std::string name)
     throw std::runtime_error(msg.str().c_str());
   }
   while (p->next != NULL) p = p->next;
-  p->next = new ParticleGroup(pmb, name);
+  p->next = new ParticleGroup(pmy_block, name);
   p->next->prev = p;
   p->next->next = NULL;
 

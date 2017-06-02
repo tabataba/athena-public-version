@@ -56,7 +56,7 @@ public:
   static int ntotal;
 
   // functions
-  ParticleGroup* AddParticleGroup(MeshBlock *pmb, std::string name);
+  ParticleGroup* AddParticleGroup(std::string name);
   std::vector<Particle>& GetParticle(std::string name);
   std::vector<Particle> const& GetParticle(std::string name) const;
   void PropertyUpdate(Real time, Real dt);

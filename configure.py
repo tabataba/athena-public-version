@@ -262,7 +262,7 @@ definitions['COORDINATE_SYSTEM'] = makefile_options['COORDINATES_FILE'] = args['
 definitions['EQUATION_OF_STATE'] = makefile_options['EOS_FILE'] = args['eos']
 
 # legacy defnition of NON_BAROTROPIC_EOS
-if args['eos'] == 'adiabatic' or args['eos'] == 'heterogenous':
+if args['eos'] == 'adiabatic' or args['eos'] == 'heterogeneous':
   definitions['NON_BAROTROPIC_EOS'] = '1'
 elif args['eos'] == 'shallow_water':
   definitions['NON_BAROTROPIC_EOS'] = '0'

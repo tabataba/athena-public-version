@@ -18,7 +18,6 @@ Reaction::Reaction()
     reactor[i] = -1;
     measure[i] = 0.;
   }
-  pfunc = NULL;
 }
 
 Reaction::~Reaction() {}
@@ -31,15 +30,14 @@ Reaction::Reaction(Reaction const& other)
 
 Reaction& Reaction::operator=(Reaction const& other)
 {
-  tag = other.tag;
   name = other.name;
+  tag = other.tag;
   comment = other.comment;
   for (int i = 0; i < NREACTOR; ++i) {
     reactor[i] = other.reactor[i];
     measure[i] = other.measure[i];
   }
   coeff = other.coeff;
-  pfunc = other.pfunc;
   return *this;
 }
 
@@ -168,6 +166,7 @@ ReactionGroup::ReactionGroup(MeshBlock *pmb, std::string _name):
 {
   prev = NULL;
   next = NULL;
+  initialized_ = false;
 
   // this is dummpy allocation of memory for reaction rate array
   int ncells1 = pmy_block->block_size.nx1 + 2*(NGHOST);
@@ -185,7 +184,7 @@ ReactionGroup::~ReactionGroup()
 }
 
 // functions
-ReactionGroup* ReactionGroup::AddReactionGroup(MeshBlock *pmb, std::string name)
+ReactionGroup* ReactionGroup::AddReactionGroup(std::string name)
 {
   std::stringstream msg;
   ReactionGroup *p = this;
@@ -194,7 +193,7 @@ ReactionGroup* ReactionGroup::AddReactionGroup(MeshBlock *pmb, std::string name)
     throw std::runtime_error(msg.str().c_str());
   }
   while (p->next != NULL) p = p->next;
-  p->next = new ReactionGroup(pmb, name);
+  p->next = new ReactionGroup(pmy_block, name);
   p->next->prev = p;
   p->next->next = NULL;
 
@@ -202,44 +201,51 @@ ReactionGroup* ReactionGroup::AddReactionGroup(MeshBlock *pmb, std::string name)
 }
 
 ReactionGroup* ReactionGroup::AddReaction(ParameterInput *pin, std::string block,
-  std::string tag_, Molecule *pmol, ReactionFunc_t pfunc_)
+  std::string tag, Molecule *pmol, ReactionFunc_t pfunc)
 {
-  std::string rname = pin->GetString(block, tag_);
+  std::stringstream msg;
+  if (initialized_) {
+    msg << "### FATAL ERROR in AddReaction: ReactionGroup has been initialized. No more reaction is allowd." << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+  }
+
+  std::string rname = pin->GetString(block, tag);
   Reaction rc;
-  rc.SetFromString(rname, pmol, tag_);
-  rc.pfunc = pfunc_;
-  q.push_back(rc);
+  rc.SetFromString(rname, pmol, tag);
+  fns_.push_back(pfunc);
+  rts_.push_back(rc);
 }
 
-std::vector<Reaction>& ReactionGroup::GetReactions(std::string name)
+ReactionGroup* ReactionGroup::GetReactionGroup(std::string name)
 {
   std::stringstream msg;
   ReactionGroup *p = this;
 
   while ((p != NULL) && (p->name != name)) p = p->next;
   if (p == NULL) {
-    msg << "### FATAL ERROR in GetReaction : ReactionGroup " << name << " not found" << std::endl;
+    msg << "### FATAL ERROR in GetReactionGroup : ReactionGroup " << name << " not found" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
 
-  return p->q;
+  return p;
 }
 
-std::vector<Reaction> const& ReactionGroup::GetReactions(std::string name) const
+int ReactionGroup::FindReactionId(std::string tag) const
 {
+  for (size_t r = 0; r < rts_.size(); ++r)
+    if (rts_[r].tag == tag)
+      return r;
   std::stringstream msg;
-  ReactionGroup const *p = this;
-
-  while ((p != NULL) && (p->name != name)) p = p->next;
-  if (p == NULL) {
-    msg << "### FATAL ERROR in GetReaction : ReactionGroup " << name << " not found" << std::endl;
-    throw std::runtime_error(msg.str().c_str());
-  }
-
-  return p->q;
+  msg << "### FATAL ERROR in FindReactionId: " << name << " not found" << std::endl;
+  throw std::runtime_error(msg.str().c_str());
 }
 
-void ReactionGroup::SetReactionRateArray()
+void ReactionGroup::SetReactionFunction(int i, ReactionFunc_t pfunc)
+{
+  fns_[i] = pfunc;
+}
+
+void ReactionGroup::InitReactionRateArray()
 {
   rate.DeleteAthenaArray();
   // Allocate memory for reaction rate array
@@ -247,5 +253,14 @@ void ReactionGroup::SetReactionRateArray()
   int ncells2 = 1, ncells3 = 1;
   if (pmy_block->block_size.nx2 > 1) ncells2 = pmy_block->block_size.nx2 + 2*(NGHOST);
   if (pmy_block->block_size.nx3 > 1) ncells3 = pmy_block->block_size.nx3 + 2*(NGHOST);
-  rate.NewAthenaArray(q.size(),ncells3,ncells2,ncells1);
+  rate.NewAthenaArray(rts_.size(),ncells3,ncells2,ncells1);
+  initialized_ = true;
+}
+
+void ReactionGroup::CalculateReactionRates(AthenaArray<Real> const& prim, int i1, int
+i2, Real time)
+{
+  for (size_t r = 0; r < fns_.size(); ++r)
+    if (fns_[r] != NULL)
+      fns_[r](pmy_block, time, rts_[r], prim, i1, i2, rate, r);
 }

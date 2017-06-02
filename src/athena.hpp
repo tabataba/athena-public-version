@@ -44,12 +44,11 @@ typedef struct EdgeField {
 // enums used everywhere
 
 // array indices for conserved: density, momemtum, total energy, face-centered field 
-enum {IDN=0, IM1=1, IM2=2, IM3=3, IEN=4};
+enum {IDN=0, IM1=NCOMP, IM2=NCOMP+1, IM3=NCOMP+2, IEN=NCOMP+3};
 enum {IB1=0, IB2=1, IB3=2};
 
 // array indices for 1D primitives: velocity, transverse components of field
-enum {IT=0,IVX=(NCOMP), IVY=(NCOMP)+1, IVZ=(NCOMP)+2, IPR=(NCOMP)+3,
-  IBY=(NHYDRO), IBZ=((NHYDRO)+1)};
+enum {IT=0, IVX=NCOMP, IVY=NCOMP+1, IVZ=NCOMP+2, IPR=NCOMP+3, IBY=NHYDRO, IBZ=NHYDRO+1};
 
 // array indices for face-centered electric fields returned by Riemann solver
 enum {X1E2=0, X1E3=1, X2E3=0, X2E1=1, X3E1=0, X3E2=1};
@@ -81,6 +80,6 @@ typedef Real (*TimeStepFunc_t)(MeshBlock *pmb);
 typedef Real (*HistoryOutputFunc_t)(MeshBlock *pmb, int iout);
 typedef bool (*ParticleUpdateFunc_t)(MeshBlock *pmb, Particle& pt, int cid[3], Real const time, Real const dt);
 typedef void (*ReactionFunc_t)(MeshBlock *pmb, Real const time, Reaction const& rc, 
-  AthenaArray<Real> const& prim, int i, AthenaArray<Real>& rate, int r);
+  AthenaArray<Real> const& prim, int i1, int i2, AthenaArray<Real>& rate, int r);
 
 #endif // ATHENA_HPP
