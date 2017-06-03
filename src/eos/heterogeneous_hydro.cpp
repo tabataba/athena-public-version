@@ -216,3 +216,55 @@ Real HeterogeneousHydro::SoundSpeed(Real const prim[])
   rck += r1*cv_[0]*kappa_[0];
   return sqrt((rck/rc+1)*prim[IPR]/rho);
 }
+
+Real HeterogeneousHydro::Entropy(Real const prim[])
+{
+  Real entropy = 0., x1 = 1., xt = 1.;
+  // total gas mixing ratios
+  for (int n = NGAS; n < NCOMP; ++n)
+    xt -= prim[n];
+  // gas entropy
+  for (int n = 1; n < NGAS; ++n) {
+    entropy += (kappa_[n]+1.)*cv_[n]*log(prim[IT])*prim[n]
+      - Globals::Rgas*log(prim[n]/xt*prim[IPR])*prim[n];
+    x1 -= prim[n];
+  }
+  // cloud entropy
+  for (int n = NGAS; n < NCOMP; ++n) {
+    entropy += ((kappa_[n]+1.)*cv_[n]*log(prim[IT])+ latent_[n]/prim[IT])*prim[n];
+    x1 -= prim[n];
+  }
+  entropy += (kappa_[0]+1.)*cv_[0]*log(prim[IT])*x1
+    - Globals::Rgas*log(prim[0]/xt*prim[IPR])*x1;
+  return entropy;
+}
+
+Real HeterogeneousHydro::Energy(Real const prim[])
+{
+  Real enthalpy = 0., x1 = 1.;
+  for (int n = 1; n < NGAS; ++n) {
+    enthalpy += (kappa_[n]+1.)*cv_[n]*prim[IT]*prim[n];
+    x1 -= prim[n];
+  }
+  for (int n = NGAS; n < NCOMP; ++n) {
+    enthalpy += ((kappa_[n]+1.)*cv_[n]*prim[IT] + latent_[n])*prim[n];
+    x1 -= prim[n];
+  }
+  enthalpy += (kappa_[0]+1.)*cv_[0]*x1;
+  return enthalpy;
+}
+
+Real HeterogeneousHydro::Enthalpy(Real const prim[])
+{
+  Real energy = 0., x1 = 1.;
+  for (int n = 1; n < NGAS; ++n) {
+    energy += cv_[n]*prim[IT]*prim[n];
+    x1 -= prim[n];
+  }
+  for (int n = NGAS; n < NCOMP; ++n) {
+    energy += (cv_[n]*prim[IT] + latent_[n])*prim[n];
+    x1 -= prim[n];
+  }
+  energy += cv_[0]*x1;
+  return energy; 
+}

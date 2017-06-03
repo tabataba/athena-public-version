@@ -35,11 +35,15 @@ public:
   virtual void PrimitiveToConserved(const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
     AthenaArray<Real> &cons, Coordinates *pco,
     int is, int ie, int js, int je, int ks, int ke) = 0;
-  virtual Real SoundSpeed(Real const prim[]) { return 0.; }
+
+  virtual Real SoundSpeed(Real const prim[]) {return 0.;}
+  virtual Real Entropy(Real const prim[]) {return 0.;}
+  virtual Real Energy(Real const prim[]) {return 0.;}
+  virtual Real Enthalpy(Real const prim[]) {return 0.;}
 
   Real GetDensityFloor() const {return density_floor_;}
   Real GetPressureFloor() const {return pressure_floor_;}
-  Real GetGamma() const { return gamma_; }
+  Real GetGamma() const {return gamma_;}
 
 protected:
   MeshBlock *pmy_block_;                 // ptr to MeshBlock containing this EOS
@@ -65,13 +69,18 @@ class HeterogeneousHydro: public EquationOfState {
 public:
   HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin);
   virtual ~HeterogeneousHydro();
-  Real SoundSpeed(Real const prim[]);
+
   void ConservedToPrimitive(AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old,
     const FaceField &b, AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
     Coordinates *pco, int is, int ie, int js, int je, int ks, int ke);
   void PrimitiveToConserved(const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
     AthenaArray<Real> &cons, Coordinates *pco,
     int is, int ie, int js, int je, int ks, int ke);
+
+  Real SoundSpeed(Real const prim[]);
+  Real Entropy(Real const prim[]);
+  Real Energy(Real const prim[]);
+  Real Enthalpy(Real const prim[]);
 protected:
   Real cv_[NCOMP], latent_[NCOMP], kappa_[NCOMP]; // heat capacity, latent heat and R/cv
 };

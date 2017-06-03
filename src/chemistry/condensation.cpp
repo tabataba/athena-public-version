@@ -2,7 +2,6 @@
 #include <cmath>
 
 // Athena++ headers
-#include "condensation.hpp"
 #include "../math_funcs.hpp"
 #include "reaction.hpp"
 #include "sat_vapor_pres.hpp"

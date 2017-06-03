@@ -8,6 +8,7 @@
 
 // Athena++ classes headers
 #include "../athena.hpp"
+#include "../eos/eos.hpp"
 
 #define NREACTOR 4
 
@@ -60,5 +61,10 @@ protected:
 };
 
 Real NullReaction(Reaction const& rc, Real const prim[NHYDRO], Real time);
+Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[NHYDRO], Real time);
+Real GasCloudIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time);
+Real LiquidSolidIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time);
+//void EquilibrateSP(Real prim[], EquationOfState *peos, ReactionGroup *prg,
+//  Real entropy, Real pres, Real precision = 1.E-8);
 
 #endif
