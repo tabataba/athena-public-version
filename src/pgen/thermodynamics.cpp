@@ -44,7 +44,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   prg->AddReaction(pin, "chemistry", "r5", pmol, &GasCloudIdeal);
   prg->AddReaction(pin, "chemistry", "r6", pmol, &GasCloudIdeal);
   prg->AddReaction(pin, "chemistry", "r7", pmol, &LiquidSolidIdeal);
-  prg->InitReactionRateArray();
 
   Real mixr[NCOMP];
 
@@ -63,7 +62,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
       for (int i = is; i <= ie; ++i) {
-        phydro->w(IT,k,j,i) = 300.;
+        phydro->w(IT,k,j,i) = 132.;
         for (int c = 1; c < NCOMP; ++c)
           phydro->w(c,k,j,i) = mixr[c]/tmols;
         phydro->w(IVX,k,j,i) = 0.;
@@ -72,7 +71,18 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         phydro->w(IPR,k,j,i) = pcoord->x1v(i);
       }
 
-  // transfer to conservative variables
+  Real norm, time = 0.;
+  for (int i = is; i <= ie; ++i) {
+    std::cout << "i = " << i << std::endl;
+    int ncycle = 0;
+    do {
+      norm = prg->EvolveOneTimeStep(phydro->w, time, 1., i, i, js, je, ks, ke);
+      ncycle++;
+    } while (norm > 1.E-20 and ncycle < 2000);
+    std::cout << "total cycles = " << ncycle << std::endl;
+  }
+
+  // convert to conservative variables
   // bcc is cell-centered magnetic fields, it is only a place holder here
   peos->PrimitiveToConserved(phydro->w, pfield->bcc, phydro->u, pcoord, is, ie, js, je, ks, ke);
 }

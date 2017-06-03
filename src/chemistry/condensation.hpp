@@ -4,15 +4,8 @@
 // Athena++ headers
 #include "../athena.hpp"
 
-class MeshBlock;
-template<typename T> class AthenaArray;
-
-void GasGasSolidNH4SH(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, int i1, int i2, AthenaArray<Real>& rate, int r);
-
-void GasCloudIdeal(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, int i1, int i2, AthenaArray<Real>& rate, int r);
-void LiquidSolidIdeal(MeshBlock *pmb, Real const time, Reaction const& rc,
-  AthenaArray<Real> const& prim, int i1, int i2, AthenaArray<Real>& rate, int r);
+Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[NHYDRO], Real time);
+Real GasCloudIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time);
+Real LiquidSolidIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time);
 
 #endif

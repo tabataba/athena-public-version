@@ -11,6 +11,7 @@
 #include "../athena_arrays.hpp"
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
+#include "../math_funcs.hpp"
 
 Reaction::Reaction()
 {
@@ -166,19 +167,10 @@ ReactionGroup::ReactionGroup(MeshBlock *pmb, std::string _name):
 {
   prev = NULL;
   next = NULL;
-  initialized_ = false;
-
-  // this is dummpy allocation of memory for reaction rate array
-  int ncells1 = pmy_block->block_size.nx1 + 2*(NGHOST);
-  int ncells2 = 1, ncells3 = 1;
-  if (pmy_block->block_size.nx2 > 1) ncells2 = pmy_block->block_size.nx2 + 2*(NGHOST);
-  if (pmy_block->block_size.nx3 > 1) ncells3 = pmy_block->block_size.nx3 + 2*(NGHOST);
-  rate.NewAthenaArray(ncells3,ncells2,ncells1);
 }
 
 ReactionGroup::~ReactionGroup()
 {
-  rate.DeleteAthenaArray();
   if (prev != NULL) prev->next = next;
   if (next != NULL) next->prev = prev;
 }
@@ -203,12 +195,6 @@ ReactionGroup* ReactionGroup::AddReactionGroup(std::string name)
 ReactionGroup* ReactionGroup::AddReaction(ParameterInput *pin, std::string block,
   std::string tag, Molecule *pmol, ReactionFunc_t pfunc)
 {
-  std::stringstream msg;
-  if (initialized_) {
-    msg << "### FATAL ERROR in AddReaction: ReactionGroup has been initialized. No more reaction is allowd." << std::endl;
-    throw std::runtime_error(msg.str().c_str());
-  }
-
   std::string rname = pin->GetString(block, tag);
   Reaction rc;
   rc.SetFromString(rname, pmol, tag);
@@ -230,13 +216,13 @@ ReactionGroup* ReactionGroup::GetReactionGroup(std::string name)
   return p;
 }
 
-int ReactionGroup::FindReactionId(std::string tag) const
+int ReactionGroup::GetReactionId(std::string tag) const
 {
   for (size_t r = 0; r < rts_.size(); ++r)
     if (rts_[r].tag == tag)
       return r;
   std::stringstream msg;
-  msg << "### FATAL ERROR in FindReactionId: " << name << " not found" << std::endl;
+  msg << "### FATAL ERROR in GetReactionId: " << name << " not found" << std::endl;
   throw std::runtime_error(msg.str().c_str());
 }
 
@@ -245,22 +231,69 @@ void ReactionGroup::SetReactionFunction(int i, ReactionFunc_t pfunc)
   fns_[i] = pfunc;
 }
 
-void ReactionGroup::InitReactionRateArray()
+void ReactionGroup::CalculateReactionRates(std::vector<Real>& rates, Real time,
+  AthenaArray<Real> const& prim, int i, int j, int k)
 {
-  rate.DeleteAthenaArray();
-  // Allocate memory for reaction rate array
-  int ncells1 = pmy_block->block_size.nx1 + 2*(NGHOST);
-  int ncells2 = 1, ncells3 = 1;
-  if (pmy_block->block_size.nx2 > 1) ncells2 = pmy_block->block_size.nx2 + 2*(NGHOST);
-  if (pmy_block->block_size.nx3 > 1) ncells3 = pmy_block->block_size.nx3 + 2*(NGHOST);
-  rate.NewAthenaArray(rts_.size(),ncells3,ncells2,ncells1);
-  initialized_ = true;
+  Real prim1[NHYDRO];
+  for (int n = 0; n < NHYDRO; ++n)
+    prim1[n] = prim(n,k,j,i);
+  rates.resize(rts_.size());
+  for (size_t r = 0; r < fns_.size(); ++r)
+    rates[r] = fns_[r](rts_[r], prim1, time);
 }
 
-void ReactionGroup::CalculateReactionRates(AthenaArray<Real> const& prim, int i1, int
-i2, Real time)
+Real ReactionGroup::EvolveOneTimeStep(AthenaArray<Real>& prim, Real& time, Real dtmax,
+  int is, int ie, int js, int je, int ks, int ke)
 {
-  for (size_t r = 0; r < fns_.size(); ++r)
-    if (fns_[r] != NULL)
-      fns_[r](pmy_block, time, rts_[r], prim, i1, i2, rate, r);
+  Real dt = dtmax;
+  // allocate space for net reaction rate
+  nrate_.resize(NCOMP*(ie-is+1)*(je-js+1)*(ke-ks+1));
+  std::fill(nrate_.begin(), nrate_.end(), 0.);
+  int count = 0.;
+  Real prim1[NHYDRO];
+
+  for (int k = ks; k <= ke; ++k)
+    for (int j = js; j <= je; ++j)
+      for (int i = is; i <= ie; ++i) {
+        // copy primitive variable
+        Real x1 = 1.;
+        for (int n = 0; n < NHYDRO; ++n) {
+          prim1[n] = prim(n,k,j,i);
+          if (n > 0 && n < NCOMP) x1 -= prim1[n];
+        }
+        // calculate net reaction rate for each component
+        for (size_t r = 0; r < rts_.size(); ++r) {
+          Real rate = fns_[r](rts_[r], prim1, time);
+          for (int n = 0; rts_[r].reactor[n] != -1; ++n)
+            nrate_[count + rts_[r].reactor[n]] += rate*rts_[r].measure[n];
+        }
+        // calculate time step;
+        if (nrate_[count] < 0.)
+          dt = _min(dt, x1/fabs(nrate_[count]));
+        for (int n = 1; n < NCOMP; ++n)
+          if (nrate_[count+n] < 0.)
+            dt = _min(dt, prim1[n]/fabs(nrate_[count+n]));
+        count += NCOMP;
+      }
+
+  // evolve chemical system for one time step
+  count = 0;
+  Real norm = 0.;
+  for (int k = ks; k <= ke; ++k)
+    for (int j = js; j <= je; ++j)
+      for (int i = is; i <= ie; ++i) {
+        ++count; // skip the first one, which is temperature
+        for (int n = 1; n < NCOMP; ++n, ++count) {
+          prim(n,k,j,i) += nrate_[count]*dt;
+          norm += fabs(nrate_[count]*dt);
+        }
+      }
+  time += dt;
+  norm /= NCOMP*(ie-is+1)*(je-js+1)*(ke-ks+1);
+  return norm;
+}
+
+Real NullReaction(Reaction const& rc, Real const prim[NHYDRO], Real time)
+{
+  return 0.;
 }
