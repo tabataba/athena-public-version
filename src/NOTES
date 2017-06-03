@@ -338,3 +338,6 @@ NCOMP - 1 variables are the mixing ratio. The following three are velocities. Th
 one is P. It makes sense because T is usually an indication of density.
 NWAVE is the dimension of primitive variables.
 if hydro only, NWAVE = NHYDRO
+
+- 6/2/2017
+Change eos, eos is seperated into a lot of different inhereted classes

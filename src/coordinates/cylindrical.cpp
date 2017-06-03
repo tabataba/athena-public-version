@@ -286,7 +286,6 @@ Real Cylindrical::GetCellVolume(const int k, const int j, const int i)
 void Cylindrical::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux,
   const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &u)
 {
-  Real iso_cs = pmy_block->peos->GetIsoSoundSpeed();
 
   for (int k=pmy_block->ks; k<=pmy_block->ke; ++k) {
 #pragma omp parallel for schedule(static)
@@ -295,11 +294,13 @@ void Cylindrical::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux,
       for (int i=pmy_block->is; i<=pmy_block->ie; ++i) {
         // src_1 = <M_{phi phi}><1/r>
         Real m_pp = prim(IDN,k,j,i)*prim(IM2,k,j,i)*prim(IM2,k,j,i);
-        if (NON_BAROTROPIC_EOS) {
-           m_pp += prim(IEN,k,j,i);
-        } else {
-           m_pp += (iso_cs*iso_cs)*prim(IDN,k,j,i);
-        }
+        #ifdef ADIABATIC_EOS
+          m_pp += prim(IEN,k,j,i);
+        #endif
+        #ifdef ISOTHERMAL_EOS
+          Real iso_cs = pmy_block->peos->SoundSpeed();
+          m_pp += (iso_cs*iso_cs)*prim(IDN,k,j,i);
+        #endif
         if (MAGNETIC_FIELDS_ENABLED) {
           m_pp += 0.5*( SQR(bcc(IB1,k,j,i)) - SQR(bcc(IB2,k,j,i)) + SQR(bcc(IB3,k,j,i)) );
         }

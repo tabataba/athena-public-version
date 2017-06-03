@@ -126,7 +126,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   // physics-related objects
   phydro = new Hydro(this, pin);
   if (MAGNETIC_FIELDS_ENABLED) pfield = new Field(this, pin);
-  peos = new EquationOfState(this, pin);
+  peos = new EQUATION_OF_STATE(this, pin);
 
   // particle-related objects
   ppg = NULL;
@@ -223,7 +223,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   // (re-)create physics-related objects in MeshBlock
   phydro = new Hydro(this, pin);
   if (MAGNETIC_FIELDS_ENABLED) pfield = new Field(this, pin);
-  peos = new EquationOfState(this, pin);
+  peos = new EQUATION_OF_STATE(this, pin);
 
   InitUserMeshBlockData(pin);
 

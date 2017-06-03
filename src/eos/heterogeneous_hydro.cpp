@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file adiabatic_hydro.cpp
-//  \brief implements functions in class EquationOfState for adiabatic hydrodynamics`
+//  \brief implements functions in class HeterogeneousHydro for adiabatic hydrodynamics`
 
 // C/C++ headers
 #include <cmath>   // sqrt()
@@ -23,18 +23,18 @@
 #include "../math_funcs.hpp"
 #include "../misc.hpp"
 
-// EquationOfState constructor
+// HeterogeneousHydro constructor
 
-EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
+HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
+  EquationOfState(pmb)
 {
   std::stringstream msg;
 
-  pmy_block_ = pmb;
   std::vector<std::string> str;
   // read gamma, size should be NCOMP
   SplitString(pin->GetString("hydro", "gamma"), str);
   if (str.size() != NCOMP) {
-    msg << "### FATAL ERROR in heterogeneous_hydro.cpp::EquationOfState: number of gases in 'gamma' does not equal NGAS" << std::endl;
+    msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of gases in 'gamma' does not equal NGAS" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (int i = 0; i < NCOMP; ++i)
@@ -43,7 +43,7 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
   // read cv, size should be NCOMP, unit is [J/g], convert to [J/kg]
   SplitString(pin->GetString("hydro", "cv"), str);
   if (str.size() != NCOMP) {
-    msg << "### FATAL ERROR in heterogeneous_hydro.cpp::EquationOfState: number of species in 'cv' does not equal NCOMP" << std::endl;
+    msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of species in 'cv' does not equal NCOMP" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (int i = 0; i < NCOMP; ++i)
@@ -53,7 +53,7 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
   if (NCOMP - NGAS > 0) {
     SplitString(pin->GetString("hydro", "latent"), str);
     if (str.size() != NCOMP - NGAS) {
-      msg << "### FATAL ERROR in heterogeneous_hydro.cpp::EquationOfState: number of clouds in 'latent' does not equal " << NCOMP - NGAS << std::endl;
+      msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of clouds in 'latent' does not equal " << NCOMP - NGAS << std::endl;
       throw std::runtime_error(msg.str().c_str());
     }
   }
@@ -69,18 +69,18 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
 
 // destructor
 
-EquationOfState::~EquationOfState()
+HeterogeneousHydro::~HeterogeneousHydro()
 {
 }
 
 //----------------------------------------------------------------------------------------
-// \!fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
+// \!fn void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
 //           const AthenaArray<Real> &prim_old, const FaceField &b,
 //           AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
 //           int is, int ie, int js, int je, int ks, int ke)
 // \brief Converts conserved into primitive variables in adiabatic hydro.
 
-void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
+void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
   const AthenaArray<Real> &prim_old, const FaceField &b, AthenaArray<Real> &prim,
   AthenaArray<Real> &bcc, Coordinates *pco, int is, int ie, int js, int je, int ks, int ke)
 {
@@ -136,12 +136,12 @@ void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
 
 
 //----------------------------------------------------------------------------------------
-// \!fn void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+// \!fn void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 //           const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
 //           int is, int ie, int js, int je, int ks, int ke);
 // \brief Converts primitive variables into conservative variables
 
-void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
      const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
      int is, int ie, int js, int je, int ks, int ke)
 {
@@ -197,10 +197,10 @@ void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
 }
 
 //----------------------------------------------------------------------------------------
-// \!fn Real EquationOfState::SoundSpeed(Real prim[NHYDRO])
+// \!fn Real HeterogeneousHydro::SoundSpeed(Real const prim[])
 // \brief returns adiabatic sound speed given vector of primitive variables
 
-Real EquationOfState::SoundSpeed(Real const prim[NHYDRO])
+Real HeterogeneousHydro::SoundSpeed(Real const prim[])
 {
   Real r1, x1 = 0., rho = 0., rck = 0., rc = 0.;
   for (int c = 1; c < NCOMP; ++c) {

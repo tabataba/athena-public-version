@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file isothermal_hydro.cpp
-//  \brief implements functions in class EquationOfState for isothermal hydrodynamics`
+//  \brief implements functions in class IsothermalHydro for isothermal hydrodynamics`
 
 // C/C++ headers
 #include <cfloat>  // FLT_MIN
@@ -18,29 +18,29 @@
 #include "../parameter_input.hpp"
 #include "../field/field.hpp"
 
-// EquationOfState constructor
+// IsothermalHydro constructor
 
-EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
+IsothermalHydro::IsothermalHydro(MeshBlock *pmb, ParameterInput *pin):
+  EquationOfState(pmb)
 {
-  pmy_block_ = pmb;
   iso_sound_speed_ = pin->GetReal("hydro","iso_sound_speed"); // error if missing!
   density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
 }
 
 // destructor
 
-EquationOfState::~EquationOfState()
+IsothermalHydro::~IsothermalHydro()
 {
 }
 
 //----------------------------------------------------------------------------------------
-// \!fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
+// \!fn void IsothermalHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
 //           const AthenaArray<Real> &prim_old, const FaceField &b,
 //           AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
 //           int is, int ie, int js, int je, int ks, int ke)
 // \brief Converts conserved into primitive variables in adiabatic hydro.
 
-void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
+void IsothermalHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
   const AthenaArray<Real> &prim_old, const FaceField &b, AthenaArray<Real> &prim,
   AthenaArray<Real> &bcc, Coordinates *pco, int is, int ie, int js, int je, int ks, int ke)
 {
@@ -78,12 +78,12 @@ void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
 }
 
 //----------------------------------------------------------------------------------------
-// \!fn void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+// \!fn void IsothermalHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 //           const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
 //           int is, int ie, int js, int je, int ks, int ke);
 // \brief Converts primitive variables into conservative variables
 
-void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+void IsothermalHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
      const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
      int is, int ie, int js, int je, int ks, int ke)
 {
@@ -115,13 +115,4 @@ void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
   }}
 }
   return;
-}
-
-//----------------------------------------------------------------------------------------
-// \!fn Real EquationOfState::SoundSpeed(Real dummy_arg[NHYDRO])
-// \brief returns isothermal sound speed
-
-Real EquationOfState::SoundSpeed(const Real dummy_arg[NHYDRO])
-{
-  return iso_sound_speed_;
 }

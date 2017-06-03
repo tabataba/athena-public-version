@@ -1,5 +1,5 @@
 //! \file shallow_water_hydro.cpp
-//  \brief implements functions in class EquationOfState for shallow water hydrodynamics
+//  \brief implements functions in class ShallowWaterHydro for shallow water hydrodynamics
 
 // C/C++ headers
 #include <cfloat>   // FLT_MIN
@@ -12,19 +12,19 @@
 #include "../parameter_input.hpp"
 #include "../field/field.hpp"
 
-// EquationOfState constructor
-EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
+// ShallowWaterHydro constructor
+ShallowWaterHydro::ShallowWaterHydro(MeshBlock *pmb, ParameterInput *pin):
+  EquationOfState(pmb)
 {
-  pmy_block_ = pmb;
   density_floor_ = pin->GetOrAddReal("hydro", "dfloor", 1024 * FLT_MIN);
 }
 
 // destructor
-EquationOfState::~EquationOfState()
+ShallowWaterHydro::~ShallowWaterHydro()
 {
 }
 
-void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
+void ShallowWaterHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
     AthenaArray<Real> const& prim_old, FaceField const& b,
     AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
     Coordinates *pco, int is, int ie, int js, int je, int ks, int ke)
@@ -40,7 +40,7 @@ void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
       }
 }
 
-void EquationOfState::PrimitiveToConserved(AthenaArray<Real> const& prim,
+void ShallowWaterHydro::PrimitiveToConserved(AthenaArray<Real> const& prim,
     AthenaArray<Real> const& bc, AthenaArray<Real>& cons,
     Coordinates *pco, int is, int ie, int js, int je, int ks, int ke)
 {
@@ -55,7 +55,7 @@ void EquationOfState::PrimitiveToConserved(AthenaArray<Real> const& prim,
       }
 }
 
-Real EquationOfState::SoundSpeed(Real const prim[NHYDRO])
+Real ShallowWaterHydro::SoundSpeed(Real const prim[])
 {
   return sqrt(prim[IDN]);
 }

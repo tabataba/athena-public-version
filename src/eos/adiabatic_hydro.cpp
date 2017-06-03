@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file adiabatic_hydro.cpp
-//  \brief implements functions in class EquationOfState for adiabatic hydrodynamics`
+//  \brief implements functions in class AdiabaticHydro for adiabatic hydrodynamics`
 
 // C/C++ headers
 #include <cmath>   // sqrt()
@@ -20,30 +20,28 @@
 #include "../field/field.hpp"
 #include "../globals.hpp"
 
-// EquationOfState constructor
+// AdiabaticHydro constructor
 
-EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin)
+AdiabaticHydro::AdiabaticHydro(MeshBlock *pmb, ParameterInput *pin):
+  EquationOfState(pmb)
 {
-  pmy_block_ = pmb;
   gamma_ = pin->GetReal("hydro","gamma");
   density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
   pressure_floor_ = pin->GetOrAddReal("hydro","pfloor",(1024*(FLT_MIN)));
 }
 
 // destructor
-
-EquationOfState::~EquationOfState()
-{
-}
+AdiabaticHydro::~AdiabaticHydro()
+{}
 
 //----------------------------------------------------------------------------------------
-// \!fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
+// \!fn void AdiabaticHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
 //           const AthenaArray<Real> &prim_old, const FaceField &b,
 //           AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
 //           int is, int ie, int js, int je, int ks, int ke)
 // \brief Converts conserved into primitive variables in adiabatic hydro.
 
-void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
+void AdiabaticHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
   const AthenaArray<Real> &prim_old, const FaceField &b, AthenaArray<Real> &prim,
   AthenaArray<Real> &bcc, Coordinates *pco, int is, int ie, int js, int je, int ks, int ke)
 {
@@ -93,12 +91,12 @@ void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
 
 
 //----------------------------------------------------------------------------------------
-// \!fn void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+// \!fn void AdiabaticHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 //           const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
 //           int is, int ie, int js, int je, int ks, int ke);
 // \brief Converts primitive variables into conservative variables
 
-void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+void AdiabaticHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
      const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
      int is, int ie, int js, int je, int ks, int ke)
 {
@@ -136,10 +134,10 @@ void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
 }
 
 //----------------------------------------------------------------------------------------
-// \!fn Real EquationOfState::SoundSpeed(Real prim[NHYDRO])
+// \!fn Real AdiabaticHydro::SoundSpeed(Real prim[])
 // \brief returns adiabatic sound speed given vector of primitive variables
 
-Real EquationOfState::SoundSpeed(const Real prim[NHYDRO])
+Real AdiabaticHydro::SoundSpeed(Real const prim[])
 {
-  return sqrt(gamma_*prim[IEN]/prim[IDN]);
+  return sqrt(gamma_*prim[IPR]/prim[IDN]);
 }

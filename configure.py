@@ -262,12 +262,22 @@ definitions['COORDINATE_SYSTEM'] = makefile_options['COORDINATES_FILE'] = args['
 definitions['EQUATION_OF_STATE'] = makefile_options['EOS_FILE'] = args['eos']
 
 # legacy defnition of NON_BAROTROPIC_EOS
-if args['eos'] == 'adiabatic' or args['eos'] == 'heterogeneous':
+if args['eos'] == 'adiabatic':
   definitions['NON_BAROTROPIC_EOS'] = '1'
+  definitions['EOS_TYPE'] = 'ADIABATIC_EOS'
+  definitions['EQUATION_OF_STATE'] = 'AdiabaticHydro'
+elif args['eos'] == 'heterogeneous':
+  definitions['NON_BAROTROPIC_EOS'] = '1'
+  definitions['EOS_TYPE'] = 'ADIABATIC_EOS'
+  definitions['EQUATION_OF_STATE'] = 'HeterogeneousHydro'
 elif args['eos'] == 'shallow_water':
   definitions['NON_BAROTROPIC_EOS'] = '0'
-else:
+  definitions['EOS_TYPE'] = 'SHALLOW_WATER_EOS'
+  definitions['EQUATION_OF_STATE'] = 'ShallowWaterHydro'
+elif args['eos'] == 'isothermal':
   definitions['NON_BAROTROPIC_EOS'] = '0'
+  definitions['EOS_TYPE'] = 'ISOTHERMAL_EOS'
+  definitions['EQUATION_OF_STATE'] = 'IsothermalHydro'
 
 # set number of hydro variables for adiabatic/isothermal
 ngas = int(args['component'][0], 16)
