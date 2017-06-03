@@ -10,7 +10,6 @@
 #include "../parameter_input.hpp"
 #include "../chemistry/molecule.hpp"
 #include "../chemistry/reaction.hpp"
-#include "../chemistry/condensation.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../hydro/hydro.hpp"
 #include "../eos/eos.hpp"
@@ -65,9 +64,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         phydro->w(IT,k,j,i) = 132.;
         for (int c = 1; c < NCOMP; ++c)
           phydro->w(c,k,j,i) = mixr[c]/tmols;
-        phydro->w(IVX,k,j,i) = 0.;
-        phydro->w(IVY,k,j,i) = 0.;
-        phydro->w(IVZ,k,j,i) = 0.;
+        phydro->w(IVX,k,j,i) = 1.;
+        phydro->w(IVY,k,j,i) = 2.;
+        phydro->w(IVZ,k,j,i) = 3.;
         phydro->w(IPR,k,j,i) = pcoord->x1v(i);
       }
 
@@ -81,6 +80,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
     } while (norm > 1.E-20 and ncycle < 2000);
     std::cout << "total cycles = " << ncycle << std::endl;
   }
+
+  // test primitive to conservative conversion
+  for (int n = 1; n < NCOMP; ++n)
+    phydro->w(n,ks,js,is) = n/100.;
+  for (int n = 0; n < NHYDRO; ++n)
+    std::cout << phydro->w(n,ks,js,is) << std::endl;
+  peos->PrimitiveToConserved(phydro->w, pfield->bcc, phydro->u, pcoord, is, is, js, js, ks, ks);
+  peos->ConservedToPrimitive(phydro->u, phydro->w, pfield->b, phydro->w, pfield->bcc, pcoord, is, is, js, js, ks, ks);
+  for (int n = 0; n < NHYDRO; ++n)
+    std::cout << phydro->w(n,ks,js,is) << std::endl;
 
   // convert to conservative variables
   // bcc is cell-centered magnetic fields, it is only a place holder here

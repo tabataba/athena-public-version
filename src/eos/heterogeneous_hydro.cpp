@@ -90,7 +90,6 @@ void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
   for (int k=ks; k<=ke; ++k){
 #pragma omp for schedule(dynamic)
   for (int j=js; j<=je; ++j){
-#pragma simd
     for (int i=is; i<=ie; ++i){
       Real& m1 = cons(IM1,k,j,i);
       Real& m2 = cons(IM2,k,j,i);
@@ -98,26 +97,29 @@ void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
       Real rho = 0., rck = 0., rc = 0., ohr;
 
       // apply density floor, without changing momentum or energy
-      for (int c = 0; c < NCOMP; ++c) {
-        cons(c,k,j,i) = _max(cons(c,k,j,i), density_floor_);
-        rck += cons(c,k,j,i)*cv_[c]*kappa_[c];
-        rc  += cons(c,k,j,i)*cv_[c];
-        rho += cons(c,k,j,i);
+      for (int n = 0; n < NCOMP; ++n) {
+        cons(n,k,j,i) = _max(cons(n,k,j,i), density_floor_);
+        rck += cons(n,k,j,i)*cv_[n]*kappa_[n];
+        rc  += cons(n,k,j,i)*cv_[n];
+        rho += cons(n,k,j,i);
       }
       ohr = 1./rho;
 
       // molar mixing ratio
-      for (int c = 0; c < NCOMP; ++c)
-        prim(c,k,j,i) = cons(c,k,j,i)*cv_[c]*kappa_[c]/rck;
+      for (int n = 1; n < NCOMP; ++n)
+        prim(n,k,j,i) = cons(n,k,j,i)*cv_[n]*kappa_[n]/rck;
 
       // subtract cloud components when calculate pressure
-      for (int c = NGAS; c < NCOMP; ++c)
-        rck -= cons(c,k,j,i)*cv_[c]*kappa_[c];
+      Real latent = 0.;
+      for (int n = NGAS; n < NCOMP; ++n) {
+        rck -= cons(n,k,j,i)*cv_[n]*kappa_[n];
+        latent += cons(n,k,j,i)*latent_[n];
+      }
 
       // apply pressure floor, correct total energy
-      prim(IPR,k,j,i) = rck/rc*(cons(IEN,k,j,i)-0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3)));
+      prim(IPR,k,j,i) = rck/rc*(cons(IEN,k,j,i)-latent-0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3)));
       cons(IEN,k,j,i) = (prim(IPR,k,j,i) > pressure_floor_) ?  cons(IEN,k,j,i) :
-        (pressure_floor_/rck*rc + 0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3)));
+        (pressure_floor_/rck*rc + 0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3) + latent));
       prim(IPR,k,j,i) = _max(prim(IPR,k,j,i), pressure_floor_);
 
       // temperature
@@ -153,7 +155,6 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
   for (int k=ks; k<=ke; ++k){
 #pragma omp for schedule(dynamic)
   for (int j=js; j<=je; ++j){
-#pragma simd
     for (int i=is; i<=ie; ++i){
       Real const& v1 = prim(IVX,k,j,i);
       Real const& v2 = prim(IVY,k,j,i);
@@ -165,22 +166,22 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
         xt -= prim(c,k,j,i);
 
       // gas density
-      Real x1 = 0., rho = 0., rc = 0.;
-      for (int c = 1; c < NGAS; ++c) {
-        cons(c,k,j,i) = prim(c,k,j,i)/xt*prim(IPR,k,j,i)/(cv_[c]*kappa_[c]*prim(IT,k,j,i));
-        x1 += prim(c,k,j,i);
-        rho += cons(c,k,j,i);
-        rc += cons(c,k,j,i)*cv_[c];
+      Real x1 = xt, rho = 0., rc = 0.;
+      for (int n = 1; n < NGAS; ++n) {
+        cons(n,k,j,i) = prim(n,k,j,i)/xt*prim(IPR,k,j,i)/(cv_[n]*kappa_[n]*prim(IT,k,j,i));
+        x1 -= prim(n,k,j,i);
+        rho += cons(n,k,j,i);
+        rc += cons(n,k,j,i)*cv_[n];
       }
-      cons(0,k,j,i) = (xt-x1)/xt*prim(IPR,k,j,i)/(cv_[0]*kappa_[0]*prim(IT,k,j,i));
+      cons(0,k,j,i) = x1/xt*prim(IPR,k,j,i)/(cv_[0]*kappa_[0]*prim(IT,k,j,i));
       rho += cons(0,k,j,i);
       rc += cons(0,k,j,i)*cv_[0];
 
       // cloud density
-      for (int c = NGAS; c < NCOMP; ++c) {
-        cons(c,k,j,i) = prim(c,k,j,i)*cv_[0]*kappa_[0]/((xt-x1)*cv_[c]*kappa_[c])*cons(0,k,j,i);
-        rho += cons(c,k,j,i);
-        rc += cons(c,k,j,i)*cv_[c];
+      for (int n = NGAS; n < NCOMP; ++n) {
+        cons(n,k,j,i) = prim(n,k,j,i)*cv_[0]*kappa_[0]/(x1*cv_[n]*kappa_[n])*cons(0,k,j,i);
+        rho += cons(n,k,j,i);
+        rc += cons(n,k,j,i)*cv_[n];
       }
 
       // momentum
@@ -190,6 +191,8 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 
       // total energy
       cons(IEN,k,j,i) = prim(IT,k,j,i)*rc + 0.5*rho*(_sqr(v1)+_sqr(v2)+_sqr(v3));
+      for (int n = NGAS; n < NCOMP; ++n)
+        cons(IEN,k,j,i) += cons(n,k,j,i)*latent_[n];
     }
   }}
 }
