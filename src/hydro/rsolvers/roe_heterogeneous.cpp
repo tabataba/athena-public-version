@@ -14,7 +14,7 @@
 #include "../../math_funcs.hpp"
 #include "../../globals.hpp"
 
-inline Real Enthalpy(Real const rhon[], Real const mu[], Real const cv[], Real const latent[])
+inline Real Enthalpy(Real temp, Real const rhon[], Real const mu[], Real const cv[], Real const latent[])
 {
   Real cp = 0, lt = 0., rho = 0.;
   for (int n = 0; n < NGAS; ++n) {
@@ -26,8 +26,7 @@ inline Real Enthalpy(Real const rhon[], Real const mu[], Real const cv[], Real c
     lt += latent[n]/mu[n]*rhon[n];
     rho += rhon[n];
   }
-  Real ke = 0.5*(_sqr(w(IVX,i)) + _sqr(w(IVY,i)) + _sqr(w(IVZ,i)));
-  return (cp*w(IT,i) + lt)/rho + ke;
+  return (cp*temp + lt)/rho;
 }
 
 inline Real TotalDensity(AthenaArray<Real> &w, int i, Real const mu[], Real rhon[])
@@ -59,7 +58,7 @@ void Hydro::RiemannSolver(int const k, int const j, int const il, int const iu,
   int ivz = IVX + ((ivx-IVX)+2)%3;
 
   Real wave[3][NHYDRO], speed[3];
-  Real ubar, vbar, wbar, cbar, hbar, hl, hr, rhobar 
+  Real ubar, vbar, wbar, cbar, hbar, hl, hr, rhobar;
   Real qbar[NCOMP], rholn[NCOMP], rhorn[NCOMP];
   Real alpha[NHYDRO];
   Real rhol, rhor, sqrhol, sqrhor, isqrho;
@@ -78,13 +77,15 @@ void Hydro::RiemannSolver(int const k, int const j, int const il, int const iu,
     vbar = isqrho*(wl(ivy,i)*sqrhol + wr(ivy,i)*sqrhor);
     wbar = isqrho*(wl(ivz,i)*sqrhol + wr(ivz,i)*sqrhor);
 
-    hl = Enthalpy(rhol, peos->mu_, peos->cv_, peos->latent_);
-    hr = Enthalpy(rhor, peos->mu_, peos->cv_, peos->latent_);
+    hl = Enthalpy(wl(IT,i), rholn, peos->mu_, peos->cv_, peos->latent_)
+        + 0.5*(_sqr(wl(IVX,i)) + _sqr(wl(IVY,i)) + _sqr(wl(IVZ,i)));
+    hr = Enthalpy(wr(IT,i), rhorn, peos->mu_, peos->cv_, peos->latent_)
+        + 0.5*(_sqr(wr(IVX,i)) + _sqr(wr(IVY,i)) + _sqr(wr(IVZ,i)));
     hbar = isqrho*(hl*sqrhol + hr*sqrhor);
 
     // qbar, mass mixing ratio
     for (int n = 0; n < NCOMP; ++n)
-      qbar[n] = isqrho*(rhol[n]/sqrhol + rhor[n]/sqrhor);
+      qbar[n] = isqrho*(rholn[n]/sqrhol + rhorn[n]/sqrhor);
 
     // kbar = rck/rc
     Real rc = 0., rck = 0.;
