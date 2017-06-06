@@ -36,6 +36,7 @@ class Reconstruction;
 class Hydro;
 class Field;
 class EquationOfState;
+class HeterogeneousHydro;
 class ParticleGroup;
 class Molecule;
 class ReactionGroup;
@@ -129,7 +130,7 @@ public:
   // physics-related objects
   Hydro *phydro;
   Field *pfield;
-  EquationOfState *peos;
+  EQUATION_OF_STATE *peos;
 
   // particle-related objects
   ParticleGroup *ppg;

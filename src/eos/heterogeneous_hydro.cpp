@@ -31,25 +31,25 @@ HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
   std::stringstream msg;
 
   std::vector<std::string> str;
-  // read gamma, size should be NCOMP
-  SplitString(pin->GetString("hydro", "gamma"), str);
+  // read mu, size should be NCOMP, unit is [g/mol], convert to [kg/mol]
+  SplitString(pin->GetString("hydro", "mu"), str);
   if (str.size() != NCOMP) {
     msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of gases in 'gamma' does not equal NGAS" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (int i = 0; i < NCOMP; ++i)
-    kappa_[i] = atof(str[i].c_str()) - 1.;
+    mu_[i] = atof(str[i].c_str())*1.E-3;
 
-  // read cv, size should be NCOMP, unit is [J/g], convert to [J/kg]
+  // read cv, size should be NCOMP, unit is [R0], convert to [J/(mol K)]
   SplitString(pin->GetString("hydro", "cv"), str);
   if (str.size() != NCOMP) {
     msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of species in 'cv' does not equal NCOMP" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (int i = 0; i < NCOMP; ++i)
-    cv_[i] = atof(str[i].c_str())*1000.;
+    cv_[i] = atof(str[i].c_str())*Globals::Rgas;
 
-  // read latent, size should be NCOMP - NGAS, unit is [J/g], convert to [J/kg]
+  // read latent, size should be NCOMP - NGAS, unit is [J/mol]
   if (NCOMP - NGAS > 0) {
     SplitString(pin->GetString("hydro", "latent"), str);
     if (str.size() != NCOMP - NGAS) {
@@ -60,7 +60,7 @@ HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
   for (int i = 0; i < NGAS; ++i)
     latent_[i] = 0.;
   for (int i = NGAS; i < NCOMP; ++i)
-    latent_[i] = atof(str[i].c_str())*1000.;
+    latent_[i] = atof(str[i].c_str());
 
   //density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
   density_floor_  = 0.;
@@ -99,21 +99,21 @@ void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
       // apply density floor, without changing momentum or energy
       for (int n = 0; n < NCOMP; ++n) {
         cons(n,k,j,i) = _max(cons(n,k,j,i), density_floor_);
-        rck += cons(n,k,j,i)*cv_[n]*kappa_[n];
-        rc  += cons(n,k,j,i)*cv_[n];
+        rck += cons(n,k,j,i)*Globals::Rgas/mu_[n];
+        rc  += cons(n,k,j,i)*cv_[n]/mu_[n];
         rho += cons(n,k,j,i);
       }
       ohr = 1./rho;
 
       // molar mixing ratio
       for (int n = 1; n < NCOMP; ++n)
-        prim(n,k,j,i) = cons(n,k,j,i)*cv_[n]*kappa_[n]/rck;
+        prim(n,k,j,i) = cons(n,k,j,i)*Globals::Rgas/(mu_[n]*rck);
 
       // subtract cloud components when calculate pressure
       Real latent = 0.;
       for (int n = NGAS; n < NCOMP; ++n) {
-        rck -= cons(n,k,j,i)*cv_[n]*kappa_[n];
-        latent += cons(n,k,j,i)*latent_[n];
+        rck -= cons(n,k,j,i)*Globals::Rgas/mu_[n];
+        latent += cons(n,k,j,i)*latent_[n]/mu_[n];
       }
 
       // apply pressure floor, correct total energy
@@ -162,26 +162,26 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 
       // total gas mixing ratios
       Real xt = 1.;
-      for (int c = NGAS; c < NCOMP; ++c)
-        xt -= prim(c,k,j,i);
+      for (int n = NGAS; n < NCOMP; ++n)
+        xt -= prim(n,k,j,i);
 
       // gas density
       Real x1 = xt, rho = 0., rc = 0.;
       for (int n = 1; n < NGAS; ++n) {
-        cons(n,k,j,i) = prim(n,k,j,i)/xt*prim(IPR,k,j,i)/(cv_[n]*kappa_[n]*prim(IT,k,j,i));
+        cons(n,k,j,i) = prim(n,k,j,i)/xt*prim(IPR,k,j,i)/(Globals::Rgas/mu_[n]*prim(IT,k,j,i));
         x1 -= prim(n,k,j,i);
         rho += cons(n,k,j,i);
-        rc += cons(n,k,j,i)*cv_[n];
+        rc += cons(n,k,j,i)*cv_[n]/mu_[n];
       }
-      cons(0,k,j,i) = x1/xt*prim(IPR,k,j,i)/(cv_[0]*kappa_[0]*prim(IT,k,j,i));
+      cons(0,k,j,i) = x1/xt*prim(IPR,k,j,i)/(Globals::Rgas/mu_[0]*prim(IT,k,j,i));
       rho += cons(0,k,j,i);
-      rc += cons(0,k,j,i)*cv_[0];
+      rc += cons(0,k,j,i)*cv_[0]/mu_[0];
 
       // cloud density
       for (int n = NGAS; n < NCOMP; ++n) {
-        cons(n,k,j,i) = prim(n,k,j,i)*cv_[0]*kappa_[0]/(x1*cv_[n]*kappa_[n])*cons(0,k,j,i);
+        cons(n,k,j,i) = prim(n,k,j,i)*mu_[n]/(x1*mu_[0])*cons(0,k,j,i);
         rho += cons(n,k,j,i);
-        rc += cons(n,k,j,i)*cv_[n];
+        rc += cons(n,k,j,i)*cv_[n]/mu_[0];
       }
 
       // momentum
@@ -192,7 +192,7 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
       // total energy
       cons(IEN,k,j,i) = prim(IT,k,j,i)*rc + 0.5*rho*(_sqr(v1)+_sqr(v2)+_sqr(v3));
       for (int n = NGAS; n < NCOMP; ++n)
-        cons(IEN,k,j,i) += cons(n,k,j,i)*latent_[n];
+        cons(IEN,k,j,i) += cons(n,k,j,i)*latent_[n]/mu_[n];
     }
   }}
 }
@@ -205,19 +205,23 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 
 Real HeterogeneousHydro::SoundSpeed(Real const prim[])
 {
-  Real r1, x1 = 0., rho = 0., rck = 0., rc = 0.;
-  for (int c = 1; c < NCOMP; ++c) {
-    r1 = prim[c]*prim[IPR]/(cv_[c]*kappa_[c]*prim[IT]);
-    x1  += prim[c];
-    rho += r1;
-    rc  += r1*cv_[c];
-    rck += r1*cv_[c]*kappa_[c];
+  Real xt = 1., cv = 0., rho = 0.;
+  for (int n = NGAS; n < NCOMP; ++n)
+    xt -= prim[n];
+  Real x1 = xt;
+  for (int n = 1; n < NGAS; ++n) {
+    rho += prim[n]/xt*prim[IPR]*mu_[n]/(Globals::Rgas*prim[IT]);
+    cv += cv_[n]*prim[n];
+    x1 -= prim[n];
   }
-  r1 = (1.-x1)*prim[IPR]/(cv_[0]*kappa_[0]*prim[IT]);
-  rho += r1;
-  rc  += r1*cv_[0];
-  rck += r1*cv_[0]*kappa_[0];
-  return sqrt((rck/rc+1)*prim[IPR]/rho);
+  rho += x1/xt*prim[IPR]*mu_[0]/(Globals::Rgas*prim[IT]);
+  cv += cv_[0]*x1;
+  for (int n = NGAS; n < NCOMP; ++n) {
+    rho += prim[n]/x1*mu_[n]/mu_[0];
+    cv += cv_[n]*prim[n];
+  }
+  Real kappa = xt*Globals::Rgas/cv;
+  return sqrt((kappa + 1.)*prim[IPR]/rho);
 }
 
 Real HeterogeneousHydro::Entropy(Real const prim[])
@@ -228,36 +232,36 @@ Real HeterogeneousHydro::Entropy(Real const prim[])
     xt -= prim[n];
   // gas entropy
   for (int n = 1; n < NGAS; ++n) {
-    entropy += (kappa_[n]+1.)*cv_[n]*log(prim[IT])*prim[n]
+    entropy += (cv_[n] + Globals::Rgas/mu_[n])*log(prim[IT])*prim[n]
       - Globals::Rgas*log(prim[n]/xt*prim[IPR])*prim[n];
     x1 -= prim[n];
   }
   // cloud entropy
   for (int n = NGAS; n < NCOMP; ++n) {
-    entropy += ((kappa_[n]+1.)*cv_[n]*log(prim[IT])+ latent_[n]/prim[IT])*prim[n];
+    entropy += ((cv_[n] + Globals::Rgas/mu_[n])*log(prim[IT])+ latent_[n]/prim[IT])*prim[n];
     x1 -= prim[n];
   }
-  entropy += (kappa_[0]+1.)*cv_[0]*log(prim[IT])*x1
+  entropy += (cv_[0] + Globals::Rgas/mu_[0])*log(prim[IT])*x1
     - Globals::Rgas*log(prim[0]/xt*prim[IPR])*x1;
   return entropy;
 }
 
-Real HeterogeneousHydro::Energy(Real const prim[])
+Real HeterogeneousHydro::Enthalpy(Real const prim[])
 {
   Real enthalpy = 0., x1 = 1.;
   for (int n = 1; n < NGAS; ++n) {
-    enthalpy += (kappa_[n]+1.)*cv_[n]*prim[IT]*prim[n];
+    enthalpy += (cv_[n] + Globals::Rgas/mu_[n])*prim[IT]*prim[n];
     x1 -= prim[n];
   }
   for (int n = NGAS; n < NCOMP; ++n) {
-    enthalpy += ((kappa_[n]+1.)*cv_[n]*prim[IT] + latent_[n])*prim[n];
+    enthalpy += (cv_[n]*prim[IT] + latent_[n])*prim[n];
     x1 -= prim[n];
   }
-  enthalpy += (kappa_[0]+1.)*cv_[0]*x1;
+  enthalpy += (cv_[0] + Globals::Rgas/mu_[0])*cv_[0]*x1;
   return enthalpy;
 }
 
-Real HeterogeneousHydro::Enthalpy(Real const prim[])
+Real HeterogeneousHydro::Energy(Real const prim[])
 {
   Real energy = 0., x1 = 1.;
   for (int n = 1; n < NGAS; ++n) {

@@ -66,6 +66,7 @@ public:
 };
 
 class HeterogeneousHydro: public EquationOfState {
+  friend class Hydro;
 public:
   HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin);
   virtual ~HeterogeneousHydro();
@@ -82,7 +83,7 @@ public:
   Real Energy(Real const prim[]);
   Real Enthalpy(Real const prim[]);
 protected:
-  Real cv_[NCOMP], latent_[NCOMP], kappa_[NCOMP]; // heat capacity, latent heat and R/cv
+  Real mu_[NCOMP], cv_[NCOMP], latent_[NCOMP]; // molecular weight, heat capacity and latent heat
 };
 
 class IsothermalHydro : public EquationOfState {
