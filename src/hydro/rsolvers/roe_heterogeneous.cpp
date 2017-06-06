@@ -14,35 +14,37 @@
 #include "../../math_funcs.hpp"
 #include "../../globals.hpp"
 
-inline Real Enthalpy(AthenaArray<Real> &w, int i, Real x1, Real const cv[], Real const latent[])
+inline Real Enthalpy(Real const rhon[], Real const mu[], Real const cv[], Real const latent[])
 {
-  Real cp = (cv[0] + Globals::Rgas)*x1, lt = 0., ke;
-  for (int n = 1; n < NGAS; ++n)
-    cp += (cv[n] + Globals::Rgas)*w(n,i);
-  for (int n = NGAS; n < NCOMP; ++n) {
-    cp += cv[n]*w(n,i);
-    lt += latent[n]*w(n,i);
+  Real cp = 0, lt = 0., rho = 0.;
+  for (int n = 0; n < NGAS; ++n) {
+    cp += (cv[n] + Globals::Rgas)/mu[n]*rhon[n];
+    rho += rhon[n];
   }
-  ke = 0.5*(_sqr(w(IVX,i)) + _sqr(w(IVY,i)) + _sqr(w(IVZ,i)));
-  return cp*w(IT,i) + ke + lt;
+  for (int n = NGAS; n < NCOMP; ++n) {
+    cp += cv[n]/mu[n]*rhon[n];
+    lt += latent[n]/mu[n]*rhon[n];
+    rho += rhon[n];
+  }
+  Real ke = 0.5*(_sqr(w(IVX,i)) + _sqr(w(IVY,i)) + _sqr(w(IVZ,i)));
+  return (cp*w(IT,i) + lt)/rho + ke;
 }
 
-inline Real TotalDensity(AthenaArray<Real> &w, int i, Real const mu[], Real rhon[], Real *x1)
+inline Real TotalDensity(AthenaArray<Real> &w, int i, Real const mu[], Real rhon[])
 {
-  // total gas mixing ratio
   Real xt = 1., rho = 0.;
   for (int n = NGAS; n < NCOMP; ++n)
     xt -= w(n,i);
-  *x1 = xt;
+  Real x1 = xt;
   for (int n = 1; n < NGAS; ++n) {
     rhon[n] = w(n,i)/xt*w(IPR,i)*mu[n]/(Globals::Rgas*w(IT,i));
-    *x1 -= w(n,i);
+    x1 -= w(n,i);
     rho += rhon[n];
   }
-  rhon[0] = (*x1)/xt*w(IPR,i)*mu[0]/(Globals::Rgas*w(IT,i));
+  rhon[0] = x1/xt*w(IPR,i)*mu[0]/(Globals::Rgas*w(IT,i));
   rho += rhon[0];
   for (int n = NGAS; n < NCOMP; ++n) {
-    rhon[n] = w(n,i)/(*x1) * mu[n]/mu[0];
+    rhon[n] = (w(n,i)*mu[n])/(x1*mu[0])*rhon[0];
     rho += rhon[n];
   }
   return rho;
@@ -57,15 +59,15 @@ void Hydro::RiemannSolver(int const k, int const j, int const il, int const iu,
   int ivz = IVX + ((ivx-IVX)+2)%3;
 
   Real wave[3][NHYDRO], speed[3];
-  Real ubar, vbar, wbar, kbar, cbar, hbar, hl, hr, rhobar, x1l, x1r;
+  Real ubar, vbar, wbar, cbar, hbar, hl, hr, rhobar 
   Real qbar[NCOMP], rholn[NCOMP], rhorn[NCOMP];
   Real alpha[NHYDRO];
   Real rhol, rhor, sqrhol, sqrhor, isqrho;
   Real du, dv, dw, dp;
 
   for (int i = il; i <= iu; ++i) {
-    rhol = TotalDensity(wl, i, peos->mu_, rholn, &x1l);
-    rhor = TotalDensity(wr, i, peos->mu_, rhorn, &x1r);
+    rhol = TotalDensity(wl, i, peos->mu_, rholn);
+    rhor = TotalDensity(wr, i, peos->mu_, rhorn);
     sqrhol = sqrt(rhol);
     sqrhor = sqrt(rhor);
     isqrho = 1./(sqrhol + sqrhor);
@@ -76,38 +78,28 @@ void Hydro::RiemannSolver(int const k, int const j, int const il, int const iu,
     vbar = isqrho*(wl(ivy,i)*sqrhol + wr(ivy,i)*sqrhor);
     wbar = isqrho*(wl(ivz,i)*sqrhol + wr(ivz,i)*sqrhor);
 
-    hl = Enthalpy(wl, i, x1l, peos->cv_, peos->latent_);
-    hr = Enthalpy(wr, i, x1r, peos->cv_, peos->latent_);
+    hl = Enthalpy(rhol, peos->mu_, peos->cv_, peos->latent_);
+    hr = Enthalpy(rhor, peos->mu_, peos->cv_, peos->latent_);
     hbar = isqrho*(hl*sqrhol + hr*sqrhor);
 
-    // qbar, molar mixing ratio
-    qbar[0] = isqrho*(x1l*sqrhol + x1r*sqrhor);
-    for (int n = 1; n < NCOMP; ++n)
-      qbar[n] = isqrho*(wl(n,i)*sqrhol + wr(n,i)*sqrhor);
+    // qbar, mass mixing ratio
+    for (int n = 0; n < NCOMP; ++n)
+      qbar[n] = isqrho*(rhol[n]/sqrhol + rhor[n]/sqrhor);
 
-    // kbar
-    Real cv = 0.;
-    for (int n = 0; n < NGAS; ++n)
-      cv += peos->cv_[n]*qbar[n];
-    Real xt = 1.;
-    for (int n = NGAS; n < NCOMP; ++n) {
-      xt -= qbar[n];
-      cv += peos->cv_[n]*qbar[n];
+    // kbar = rck/rc
+    Real rc = 0., rck = 0.;
+    for (int n = 0; n < NGAS; ++n) {
+      rc += peos->cv_[n]/peos->mu_[n]*qbar[n];
+      rck += Globals::Rgas/peos->mu_[n]*qbar[n];
     }
-    kbar = xt*Globals::Rgas/cv;
+    for (int n = NGAS; n < NCOMP; ++n)
+      rc += peos->cv_[n]/peos->mu_[n]*qbar[n];
 
     // cbar
     Real latent = 0.;
     for (int n = NGAS; n < NCOMP; ++n)
-      latent += peos->latent_[n]*qbar[n];
-    cbar = sqrt(kbar*(hbar - 0.5*(_sqr(ubar) + _sqr(vbar) + _sqr(wbar)) - latent));
-
-    // molar mixing ratio to mass mixing ratio
-    Real qsum = 0.;
-    for (int n = 0; n < NCOMP; ++n)
-      qsum += peos->mu_[n]*qbar[n];
-    for (int n = 0; n < NCOMP; ++n)
-      qbar[n] /= qsum;
+      latent += peos->latent_[n]/peos->mu_[n]*qbar[n];
+    cbar = sqrt(rck/rc*(hbar - 0.5*(_sqr(ubar) + _sqr(vbar) + _sqr(wbar)) - latent));
 
     // primitive variable difference
     du = wr(ivx,i) - wl(ivx,i);
