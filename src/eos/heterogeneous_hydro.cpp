@@ -40,16 +40,16 @@ HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
   for (int i = 0; i < NCOMP; ++i)
     mu_[i] = atof(str[i].c_str())*1.E-3;
 
-  // read cv, size should be NCOMP, unit is [R0], convert to [J/(mol K)]
+  // read cv, size should be NCOMP, unit is [J/(mol K)]
   SplitString(pin->GetString("hydro", "cv"), str);
   if (str.size() != NCOMP) {
     msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of species in 'cv' does not equal NCOMP" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (int i = 0; i < NCOMP; ++i)
-    cv_[i] = atof(str[i].c_str())*Globals::Rgas;
+    cv_[i] = atof(str[i].c_str());
 
-  // read latent, size should be NCOMP - NGAS, unit is [J/mol]
+  // read latent, size should be NCOMP - NGAS, unit is [kJ/mol]
   if (NCOMP - NGAS > 0) {
     SplitString(pin->GetString("hydro", "latent"), str);
     if (str.size() != NCOMP - NGAS) {
@@ -60,7 +60,7 @@ HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
   for (int i = 0; i < NGAS; ++i)
     latent_[i] = 0.;
   for (int i = NGAS; i < NCOMP; ++i)
-    latent_[i] = atof(str[i].c_str());
+    latent_[i] = atof(str[i].c_str())*1.E3;
 
   //density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
   density_floor_  = 0.;
@@ -150,8 +150,6 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
   int nthreads = pmy_block_->pmy_mesh->GetNumMeshThreads();
 #pragma omp parallel default(shared) num_threads(nthreads)
 {
-  Real mixr[NGAS];
-
   for (int k=ks; k<=ke; ++k){
 #pragma omp for schedule(dynamic)
   for (int j=js; j<=je; ++j){
@@ -168,12 +166,12 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
       // gas density
       Real x1 = xt, rho = 0., rc = 0.;
       for (int n = 1; n < NGAS; ++n) {
-        cons(n,k,j,i) = prim(n,k,j,i)/xt*prim(IPR,k,j,i)/(Globals::Rgas/mu_[n]*prim(IT,k,j,i));
+        cons(n,k,j,i) = mu_[n]*prim(n,k,j,i)/xt*prim(IPR,k,j,i)/(Globals::Rgas*prim(IT,k,j,i));
         x1 -= prim(n,k,j,i);
         rho += cons(n,k,j,i);
         rc += cons(n,k,j,i)*cv_[n]/mu_[n];
       }
-      cons(0,k,j,i) = x1/xt*prim(IPR,k,j,i)/(Globals::Rgas/mu_[0]*prim(IT,k,j,i));
+      cons(0,k,j,i) = mu_[0]*x1/xt*prim(IPR,k,j,i)/(Globals::Rgas*prim(IT,k,j,i));
       rho += cons(0,k,j,i);
       rc += cons(0,k,j,i)*cv_[0]/mu_[0];
 
@@ -181,7 +179,7 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
       for (int n = NGAS; n < NCOMP; ++n) {
         cons(n,k,j,i) = prim(n,k,j,i)*mu_[n]/(x1*mu_[0])*cons(0,k,j,i);
         rho += cons(n,k,j,i);
-        rc += cons(n,k,j,i)*cv_[n]/mu_[0];
+        rc += cons(n,k,j,i)*cv_[n]/mu_[n];
       }
 
       // momentum
