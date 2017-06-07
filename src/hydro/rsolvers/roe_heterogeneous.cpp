@@ -53,7 +53,7 @@ void Hydro::RiemannSolver(int const k, int const j, int const il, int const iu,
     int const ivx, AthenaArray<Real> const& bx, AthenaArray<Real> &wl,
     AthenaArray<Real> &wr, AthenaArray<Real> &flx)
 {
-  HeterogeneousHydro *peos = pmy_block->peos;
+  EquationOfState *peos = pmy_block->peos;
   int ivy = IVX + ((ivx-IVX)+1)%3;
   int ivz = IVX + ((ivx-IVX)+2)%3;
 

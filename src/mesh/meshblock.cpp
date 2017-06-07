@@ -126,7 +126,20 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   // physics-related objects
   phydro = new Hydro(this, pin);
   if (MAGNETIC_FIELDS_ENABLED) pfield = new Field(this, pin);
-  peos = new EQUATION_OF_STATE(this, pin);
+  if (EQUATION_OF_STATE == "adiabatic")
+    peos = new AdiabaticHydro(this, pin);
+  else if (EQUATION_OF_STATE == "isothermal")
+    peos = new IsothermalHydro(this, pin);
+  else if (EQUATION_OF_STATE == "shallow_water")
+    peos = new ShallowWaterHydro(this, pin);
+  else if (EQUATION_OF_STATE == "heterogeneous")
+    peos = new HeterogeneousHydro(this, pin);
+  else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in MeshBlock::MeshBlock"
+        << std::endl << "Equation of state not recognized." << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+  }
 
   // particle-related objects
   ppg = NULL;
@@ -223,7 +236,20 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   // (re-)create physics-related objects in MeshBlock
   phydro = new Hydro(this, pin);
   if (MAGNETIC_FIELDS_ENABLED) pfield = new Field(this, pin);
-  peos = new EQUATION_OF_STATE(this, pin);
+  if (EQUATION_OF_STATE == "adiabatic")
+    peos = new AdiabaticHydro(this, pin);
+  else if (EQUATION_OF_STATE == "isothermal")
+    peos = new IsothermalHydro(this, pin);
+  else if (EQUATION_OF_STATE == "shallow_water")
+    peos = new ShallowWaterHydro(this, pin);
+  else if (EQUATION_OF_STATE == "heterogeneous")
+    peos = new HeterogeneousHydro(this, pin);
+  else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in MeshBlock::MeshBlock(restart)"
+        << std::endl << "Equation of state not recognized." << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+  }
 
   InitUserMeshBlockData(pin);
 

@@ -65,6 +65,9 @@ HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
   //density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
   density_floor_  = 0.;
   pressure_floor_ = pin->GetOrAddReal("hydro","pfloor",(1024*(FLT_MIN)));
+
+  // default gamma
+  gamma_ = (cv_[0] + Globals::Rgas)/cv_[0];
 }
 
 // destructor
