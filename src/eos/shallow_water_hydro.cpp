@@ -54,8 +54,3 @@ void ShallowWaterHydro::PrimitiveToConserved(AthenaArray<Real> const& prim,
         cons(IM3,k,j,i) = 0.;
       }
 }
-
-Real ShallowWaterHydro::SoundSpeed(Real const prim[])
-{
-  return sqrt(prim[IDN]);
-}

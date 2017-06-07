@@ -132,12 +132,3 @@ void AdiabaticHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 }
   return;
 }
-
-//----------------------------------------------------------------------------------------
-// \!fn Real AdiabaticHydro::SoundSpeed(Real prim[])
-// \brief returns adiabatic sound speed given vector of primitive variables
-
-Real AdiabaticHydro::SoundSpeed(Real const prim[])
-{
-  return sqrt(gamma_*prim[IPR]/prim[IDN]);
-}
