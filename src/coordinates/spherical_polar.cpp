@@ -387,6 +387,7 @@ Real SphericalPolar::GetCellVolume(const int k, const int j, const int i)
 void SphericalPolar::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux,
   const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &u)
 {
+  Real iso_cs = pmy_block->peos->GetIsoSoundSpeed();
   bool use_x2_fluxes = pmy_block->block_size.nx2 > 1;
 
   // Go through cells
@@ -397,13 +398,11 @@ void SphericalPolar::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux,
       for (int i=pmy_block->is; i<=pmy_block->ie; ++i) {
         // src_1 = < M_{theta theta} + M_{phi phi} ><1/r>
         Real m_ii = prim(IDN,k,j,i)*(SQR(prim(IM2,k,j,i)) + SQR(prim(IM3,k,j,i)));
-        #ifdef ADIABATIC_EOS
+        if (NON_BAROTROPIC_EOS) {
           m_ii += 2.0*prim(IEN,k,j,i);
-        #endif
-        #ifdef ISOTHERMAL_EOS
-          Real iso_cs = pmy_block->peos->SoundSpeed();
+        } else {
           m_ii += 2.0*(iso_cs*iso_cs)*prim(IDN,k,j,i);
-        #endif
+        }
         if (MAGNETIC_FIELDS_ENABLED) {
            m_ii += SQR(bcc(IB1,k,j,i));
         }
@@ -421,13 +420,11 @@ void SphericalPolar::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux,
 
         // src_2 = < M_{phi phi} ><cot theta/r>
         Real m_pp = prim(IDN,k,j,i)*SQR(prim(IM3,k,j,i));
-        #ifdef ADIABATIC_EOS
+        if (NON_BAROTROPIC_EOS) {
           m_pp += prim(IEN,k,j,i);
-        #endif
-        #ifdef ISOTHERMAL_EOS
-          Real iso_cs = pmy_block->peos->SoundSpeed();
+        } else {
           m_pp += (iso_cs*iso_cs)*prim(IDN,k,j,i);
-        #endif
+        }
         if (MAGNETIC_FIELDS_ENABLED) {
            m_pp += 0.5*( SQR(bcc(IB1,k,j,i)) + SQR(bcc(IB2,k,j,i)) - SQR(bcc(IB3,k,j,i)) );
         }

@@ -341,7 +341,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb)
   }
 
   // total energy
-  #ifdef ADIABATIC_EOS
+  if (NON_BAROTROPIC_EOS) {
     if (output_params.variable.compare("E") == 0 || 
         output_params.variable.compare("cons") == 0) {
       pod = new OutputData;
@@ -351,10 +351,10 @@ void OutputType::LoadOutputData(MeshBlock *pmb)
       AppendOutputDataNode(pod);
       num_vars_++;
     }
-  #endif
+  }
 
   // pressure
-  #ifdef ADIABATIC_EOS
+  if (NON_BAROTROPIC_EOS) {
     if (output_params.variable.compare("p") == 0 || 
         output_params.variable.compare("prim") == 0) {
       pod = new OutputData;
@@ -364,7 +364,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb)
       AppendOutputDataNode(pod);
       num_vars_++;
     }
-  #endif
+  }
 
   // hydro components
   if (NCOMP > 1) {

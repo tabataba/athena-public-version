@@ -293,6 +293,7 @@ Real SphericalLatlon::GetCellVolume(const int k, const int j, const int i)
 void SphericalLatlon::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux,
   const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &u)
 {
+  Real iso_cs = pmy_block->peos->GetIsoSoundSpeed();
   bool use_x2_fluxes = pmy_block->block_size.nx2 > 1;
 
   // Go through cells
@@ -303,21 +304,22 @@ void SphericalLatlon::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux
       for (int i=pmy_block->is; i<=pmy_block->ie; ++i) {
         // src_3 = < M_{theta theta} + M_{phi phi} ><1/r>
         Real m_kk = prim(IDN,k,j,i)*(_sqr(prim(IM1,k,j,i)) + _sqr(prim(IM2,k,j,i)));
-        #ifdef ADIABATIC_EOS
+
+        if (EQUATION_OF_STATE == "adiabatic") {
           m_kk += 2.0*prim(IPR,k,j,i);
-        #endif
-        #ifdef ISOTHERMAL_EOS
-          Real iso_cs = pmy_block->peos->SoundSpeed();
+        } else if (EQUATION_OF_STATE == "shallow_water") {
+          m_kk = 0.;
+        } else if (EQUATION_OF_STATE == "isothermal") {
           m_kk += 2.0*(iso_cs*iso_cs)*prim(IDN,k,j,i);
-        #endif
+        }
+
         if (MAGNETIC_FIELDS_ENABLED) {
            m_kk += _sqr(bcc(IB3,k,j,i));
         }
 
         Real darea = 0.5 * (_sqr(x3f(k+1)) - _sqr(x3f(k)));
         Real dvol  = 1./3. * (_cub(x3f(k+1)) - _cub(x3f(k)));
-        if (pmy_block->block_size.nx3 > 1) // 3D problem
-          u(IM3,k,j,i) += dt * darea/dvol * m_kk;
+        u(IM3,k,j,i) += dt * darea/dvol * m_kk;
 
         if (pmy_block->block_size.nx3 > 1) {
           // src_2 = -< M_{theta r} ><1/r> 
@@ -334,16 +336,13 @@ void SphericalLatlon::CoordSrcTerms(const Real dt, const AthenaArray<Real> *flux
         // src_2 = < M_{phi phi} ><cot theta/r>
         Real m_pp = prim(IDN,k,j,i)*_sqr(prim(IM1,k,j,i));
 
-        #ifdef ADIABATIC_EOS
+        if (EQUATION_OF_STATE == "adiabatic") {
           m_pp += prim(IPR,k,j,i);
-        #endif
-        #ifdef SHALLOW_WATER_EOS
+        } else if (EQUATION_OF_STATE == "shallow_water") {
           m_pp += 0.5 * _sqr(prim(IDN,k,j,i));
-        #endif
-        #ifdef ISOTHERMAL_EOS
-          Real iso_cs = pmy_block->peos->SoundSpeed();
+        } else if (EQUATION_OF_STATE == "isothermal") {
           m_pp += (iso_cs*iso_cs)*prim(IDN,k,j,i);
-        #endif
+        }
 
         if (MAGNETIC_FIELDS_ENABLED) {
           m_pp += 0.5*( _sqr(bcc(IB3,k,j,i)) + _sqr(bcc(IB2,k,j,i)) - _sqr(bcc(IB1,k,j,i)) );

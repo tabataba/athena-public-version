@@ -95,7 +95,7 @@ parser.add_argument('--particle',
     help='request the number of real and integer particle data')
 
 # --component=[num] argument
-parser.add_argument('--component',
+parser.add_argument('--comp',
     default='10',
     choices= map(lambda x: hex(x)[2:], range(16, 256)),
     help='request the number of components in hydro eos')
@@ -264,24 +264,16 @@ definitions['EQUATION_OF_STATE'] = makefile_options['EOS_FILE'] = args['eos']
 # legacy defnition of NON_BAROTROPIC_EOS
 if args['eos'] == 'adiabatic':
   definitions['NON_BAROTROPIC_EOS'] = '1'
-  definitions['EOS_TYPE'] = 'ADIABATIC_EOS'
-  definitions['EQUATION_OF_STATE'] = 'AdiabaticHydro'
 elif args['eos'] == 'heterogeneous':
   definitions['NON_BAROTROPIC_EOS'] = '1'
-  definitions['EOS_TYPE'] = 'ADIABATIC_EOS'
-  definitions['EQUATION_OF_STATE'] = 'HeterogeneousHydro'
 elif args['eos'] == 'shallow_water':
   definitions['NON_BAROTROPIC_EOS'] = '0'
-  definitions['EOS_TYPE'] = 'SHALLOW_WATER_EOS'
-  definitions['EQUATION_OF_STATE'] = 'ShallowWaterHydro'
 elif args['eos'] == 'isothermal':
   definitions['NON_BAROTROPIC_EOS'] = '0'
-  definitions['EOS_TYPE'] = 'ISOTHERMAL_EOS'
-  definitions['EQUATION_OF_STATE'] = 'IsothermalHydro'
 
 # set number of hydro variables for adiabatic/isothermal
-ngas = int(args['component'][0], 16)
-ncloud = int(args['component'][1], 16)
+ngas = int(args['comp'][0], 16)
+ncloud = int(args['comp'][1], 16)
 if args['eos'] == 'adiabatic':
   definitions['NHYDRO_VARIABLES'] = '5'
 if args['eos'] == 'isothermal':
@@ -304,7 +296,7 @@ definitions['HYDRO_INTEGRATOR'] = makefile_options['HYDRO_INT_FILE'] = args['fin
 definitions['NREAL_PARTICLE_DATA'] = str(int(args['particle'][0], 16))
 definitions['NINT_PARTICLE_DATA']  = str(int(args['particle'][1], 16))
 
-# --component=[num] argument
+# --comp=[num] argument
 definitions['NGAS_VARIABLES'] = str(ngas)
 definitions['NCOMP_VARIABLES'] = str(ngas + ncloud)
 
@@ -514,7 +506,7 @@ print('Your Athena++ distribution has now been configured with the following opt
 print('  Problem generator:       ' + args['prob'])
 print('  Coordinate system:       ' + args['coord'])
 print('  Equation of state:       ' + args['eos'])
-print('  Components:              ' + args['component'])
+print('  Components:              ' + args['comp'])
 print('  Riemann solver:          ' + args['flux'])
 print('  Reconstruction method:   ' + args['order'])
 print('  Hydro integrator:        ' + args['fint'])

@@ -21,7 +21,7 @@ void ShowConfig(void)
   std::cout<<"This Athena++ executable is configured with:" << std::endl;
   std::cout<<"  Problem generator:          " << PROBLEM_GENERATOR << std::endl;
   std::cout<<"  Coordinate system:          " << COORDINATE_SYSTEM << std::endl;
-  std::cout<<"  Equation of state:          " << "EQUATION_OF_STATE" << std::endl;
+  std::cout<<"  Equation of state:          " << EQUATION_OF_STATE << std::endl;
   std::cout<<"  Riemann solver:             " << RIEMANN_SOLVER << std::endl;
   std::cout<<"  Reconstruction method:      " << RECONSTRUCTION_METHOD << std::endl;
   std::cout<<"  Hydro integrator:           " << HYDRO_TIME_INTEGRATOR << std::endl;

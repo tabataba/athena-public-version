@@ -31,9 +31,7 @@ void HydroSourceTerms::ConstantAcceleration(const Real dt,const AthenaArray<Real
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real src = dt*prim(IDN,k,j,i)*g1_;
         cons(IM1,k,j,i) += src;
-        #ifdef ADIABATIC_EOS
-          cons(IEN,k,j,i) += src*prim(IVX,k,j,i);
-        #endif
+        if (NON_BAROTROPIC_EOS) cons(IEN,k,j,i) += src*prim(IVX,k,j,i);
       }
     }}
   }
@@ -47,9 +45,7 @@ void HydroSourceTerms::ConstantAcceleration(const Real dt,const AthenaArray<Real
       for (int i=pmb->is; i<=pmb->ie; ++i) {
           Real src = dt*prim(IDN,k,j,i)*g2_;
           cons(IM2,k,j,i) += src;
-          #ifdef ADIABATIC_EOS 
-            cons(IEN,k,j,i) += src*prim(IVY,k,j,i);
-          #endif
+          if (NON_BAROTROPIC_EOS) cons(IEN,k,j,i) += src*prim(IVY,k,j,i);
       }
     }}
   }
@@ -63,9 +59,7 @@ void HydroSourceTerms::ConstantAcceleration(const Real dt,const AthenaArray<Real
       for (int i=pmb->is; i<=pmb->ie; ++i) {
           Real src = dt*prim(IDN,k,j,i)*g3_;
           cons(IM3,k,j,i) += src;
-          #ifdef ADIABATIC_EOS
-            cons(IEN,k,j,i) += src*prim(IVZ,k,j,i);
-          #endif
+          if (NON_BAROTROPIC_EOS) cons(IEN,k,j,i) += src*prim(IVZ,k,j,i);
       }
     }}
   }

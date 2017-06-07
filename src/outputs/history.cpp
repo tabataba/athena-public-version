@@ -77,10 +77,10 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag)
         data_sum[5] += vol(i)*0.5*_sqr(u_my)/u_d;
         data_sum[6] += vol(i)*0.5*_sqr(u_mz)/u_d;
 
-        #ifdef ADIABATIC_EOS
+        if (NON_BAROTROPIC_EOS) {
           Real& u_e = phyd->u(IEN,k,j,i);;
           data_sum[7] += vol(i)*u_e;
-        #endif
+        }
 
         if (MAGNETIC_FIELDS_ENABLED) {
           Real& bcc1 = pfld->bcc(IB1,k,j,i);
@@ -139,9 +139,7 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag)
       fprintf(pfile,"[%d]=1-KE     ", iout++);
       fprintf(pfile,"[%d]=2-KE     ", iout++);
       fprintf(pfile,"[%d]=3-KE     ", iout++);
-      #ifdef ADIABATIC_EOS
-        fprintf(pfile,"[%d]=tot-E   ", iout++);
-      #endif
+      if (NON_BAROTROPIC_EOS) fprintf(pfile,"[%d]=tot-E   ", iout++);
       if (MAGNETIC_FIELDS_ENABLED) {
         fprintf(pfile,"[%d]=1-ME    ", iout++);
         fprintf(pfile,"[%d]=2-ME    ", iout++);
