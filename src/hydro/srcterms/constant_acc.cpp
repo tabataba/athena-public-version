@@ -12,6 +12,26 @@
 #include "../../mesh/mesh.hpp"
 #include "../../coordinates/coordinates.hpp"
 #include "../hydro.hpp"
+#include "../../eos/eos.hpp"
+#include "../../globals.hpp"
+
+inline Real TotalDensity(AthenaArray<Real> const& prim, int i, int j, int k, Real const mu[])
+{
+  Real xt = 1., rho = 0.;
+  for (int n = 0; n < NCOMP; ++n)
+    xt -= prim(n,k,j,i);
+  Real x1 = xt;
+  for (int n = 1; n < NGAS; ++n) {
+    rho += prim(n,k,j,i)*mu[n];
+    x1 -= prim(n,k,j,i);
+  }
+  Real rho0 = x1/xt*prim(IPR,k,j,i)*mu[0]/(Globals::Rgas*prim(IT,k,j,i));
+  rho *= prim(IPR,k,j,i)/(xt*Globals::Rgas*prim(IT,k,j,i));
+  rho += rho0;
+  for (int n = NGAS; n < NCOMP; ++n)
+    rho += prim(n,k,j,i)*mu[n]/(x1*mu[0])*rho0;
+  return rho;
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void HydroSourceTerms::ConstantAcceleration
@@ -22,47 +42,27 @@ void HydroSourceTerms::ConstantAcceleration(const Real dt,const AthenaArray<Real
 {
   MeshBlock *pmb = pmy_hydro_->pmy_block;
 
-  // acceleration in 1-direction
-  if (g1_!=0.0) {
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-#pragma omp parallel for schedule(static)
-    for (int j=pmb->js; j<=pmb->je; ++j) {
-#pragma simd
+  for (int k=pmb->ks; k<=pmb->ke; ++k)
+    #pragma omp parallel for schedule(static)
+    for (int j=pmb->js; j<=pmb->je; ++j)
       for (int i=pmb->is; i<=pmb->ie; ++i) {
-        Real src = dt*prim(IDN,k,j,i)*g1_;
-        cons(IM1,k,j,i) += src;
-        if (NON_BAROTROPIC_EOS) cons(IEN,k,j,i) += src*prim(IVX,k,j,i);
+        Real s1, s2, s3;
+        if (EQUATION_OF_STATE == "adiabatic") {
+          s1 = dt*prim(IDN,k,j,i)*g1_;
+          s2 = dt*prim(IDN,k,j,i)*g2_;
+          s3 = dt*prim(IDN,k,j,i)*g3_;
+        } else if (EQUATION_OF_STATE == "heterogeneous") {
+          Real rho = TotalDensity(prim, i, j, k, pmb->peos->mu_);
+          s1 = dt*rho*g1_;
+          s2 = dt*rho*g2_;
+          s3 = dt*rho*g3_;
+        }
+        cons(IM1,k,j,i) += s1;
+        cons(IM2,k,j,i) += s2;
+        cons(IM3,k,j,i) += s3;
+        if (NON_BAROTROPIC_EOS)
+          cons(IEN,k,j,i) += s1*prim(IVX,k,j,i) + s2*prim(IVY,k,j,i) + s3*prim(IVZ,k,j,i);
       }
-    }}
-  }
-
-  // acceleration in 2-direction
-  if (g2_!=0.0) {
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-#pragma omp parallel for schedule(static)
-    for (int j=pmb->js; j<=pmb->je; ++j) {
-#pragma simd
-      for (int i=pmb->is; i<=pmb->ie; ++i) {
-          Real src = dt*prim(IDN,k,j,i)*g2_;
-          cons(IM2,k,j,i) += src;
-          if (NON_BAROTROPIC_EOS) cons(IEN,k,j,i) += src*prim(IVY,k,j,i);
-      }
-    }}
-  }
-
-  // acceleration in 3-direction
-  if (g3_!=0.0) {
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-#pragma omp parallel for schedule(static)
-    for (int j=pmb->js; j<=pmb->je; ++j) {
-#pragma simd
-      for (int i=pmb->is; i<=pmb->ie; ++i) {
-          Real src = dt*prim(IDN,k,j,i)*g3_;
-          cons(IM3,k,j,i) += src;
-          if (NON_BAROTROPIC_EOS) cons(IEN,k,j,i) += src*prim(IVZ,k,j,i);
-      }
-    }}
-  }
 
   return;
 }

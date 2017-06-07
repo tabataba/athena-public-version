@@ -16,6 +16,7 @@
 
 // Declarations
 class Hydro;
+class HydroSourceTerms;
 class ParameterInput;
 struct FaceField;
 
@@ -24,6 +25,7 @@ struct FaceField;
 
 class EquationOfState {
   friend class Hydro;
+  friend class HydroSourceTerms;
 public:
   EquationOfState(MeshBlock *pmb) :
     pmy_block_(pmb)
