@@ -371,7 +371,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb)
     if (output_params.variable.compare("prim") == 0) {
       pod = new OutputData;
       pod->type = "VECTORS";
-      pod->name = "components";
+      pod->name = "comp";
       pod->data.InitWithShallowSlice(phyd->w,4,1,NCOMP-1);
       AppendOutputDataNode(pod);
       num_vars_+=NCOMP-1;

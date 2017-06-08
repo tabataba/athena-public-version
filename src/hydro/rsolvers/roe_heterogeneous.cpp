@@ -103,6 +103,9 @@ void Hydro::RiemannSolver(int const k, int const j, int const il, int const iu,
     cbar = sqrt(rck/rc*(hbar - 0.5*(_sqr(ubar) + _sqr(vbar) + _sqr(wbar)) - latent));
 
     // primitive variable difference
+    // using low Mach number fix (Rieper, 2011)
+    //du = (wr(ivx,i) - wl(ivx,i))*
+    //  std::min((fabs(ubar) + fabs(vbar) + fabs(wbar))/cbar, 1.);
     du = wr(ivx,i) - wl(ivx,i);
     dv = wr(ivy,i) - wl(ivy,i);
     dw = wr(ivz,i) - wl(ivz,i);

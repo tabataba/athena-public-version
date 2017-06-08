@@ -40,6 +40,8 @@ public:
     int is, int ie, int js, int je, int ks, int ke) = 0;
 
   virtual Real SoundSpeed(Real const prim[]) {return 0.;}
+  virtual Real HeatCapacityP(Real const prim[]) {return 0.;}
+  virtual Real Mass(Real const prim[]) {return 0.;}
   virtual Real Entropy(Real const prim[]) {return 0.;}
   virtual Real Energy(Real const prim[]) {return 0.;}
   virtual Real Enthalpy(Real const prim[]) {return 0.;}
@@ -104,6 +106,8 @@ public:
     int is, int ie, int js, int je, int ks, int ke);
 
   Real SoundSpeed(Real const prim[]);
+  Real HeatCapacityP(Real const prim[]);
+  Real Mass(Real const prim[]);
   Real Entropy(Real const prim[]);
   Real Energy(Real const prim[]);
   Real Enthalpy(Real const prim[]);

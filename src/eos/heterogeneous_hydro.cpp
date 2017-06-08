@@ -225,6 +225,36 @@ Real HeterogeneousHydro::SoundSpeed(Real const prim[])
   return sqrt((kappa + 1.)*prim[IPR]/rho);
 }
 
+Real HeterogeneousHydro::HeatCapacityP(Real const prim[])
+{
+  Real x1 = 1., cp = 0;
+  for (int n = 1; n < NGAS; ++n) {
+    cp += (cv_[n] + Globals::Rgas)*prim[n];
+    x1 -= prim[n];
+  }
+  for (int n = NGAS; n < NCOMP; ++n) {
+    cp += cv_[n]*prim[n];
+    x1 -= prim[n];
+  }
+  cp += (cv_[0] + Globals::Rgas)*x1;
+  return cp;
+}
+
+Real HeterogeneousHydro::Mass(Real const prim[])
+{
+  Real x1 = 1., mu = 0;
+  for (int n = 1; n < NGAS; ++n) {
+    mu += mu_[n]*prim[n];
+    x1 -= prim[n];
+  }
+  for (int n = NGAS; n < NCOMP; ++n) {
+    mu += mu_[n]*prim[n];
+    x1 -= prim[n];
+  }
+  mu += mu_[0]*x1;
+  return mu;
+}
+
 Real HeterogeneousHydro::Entropy(Real const prim[])
 {
   Real entropy = 0., x1 = 1., xt = 1.;
