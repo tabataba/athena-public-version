@@ -14,7 +14,7 @@ int Molecule::ntotal = 0;
 
 std::ostream& operator<<(std::ostream &os, Molecule const& mol)
 {
-  os << "name: " << mol.name << std::endl
+  os << "name: " << mol.myname << std::endl
      << "molecular weight: " << mol.mu << " kg/mol" << std::endl
      << "heat capacity (cp): " << mol.m_cp << " J/(mol K)" << std::endl
      << "vaporization heat at triple point: " << mol.m_latent << " kJ/mol" << std::endl
@@ -25,7 +25,7 @@ std::ostream& operator<<(std::ostream &os, Molecule const& mol)
 }
 
 Molecule::Molecule(std::string name):
-  name(name), mu(0), tr(0), pr(0), tc(0), pc(0), phase(GAS),
+  myname(name), mu(0), tr(0), pr(0), tc(0), pc(0), phase(GAS),
   m_cp(0), m_latent(0), m_entropy(0), m_enthalpy(0), m_gibbs(0),
   m_cliq(0), m_enliq(0), m_csld(0), m_ensld(0),
   m_beta(0), m_gamma(0), m_nshomate(0)
@@ -42,8 +42,15 @@ Molecule::Molecule(std::string name):
   ntotal++;
 }
 
-Molecule::Molecule(ParameterInput *pin)
+Molecule::Molecule(ParameterInput *pin):
+  mu(0), tr(0), pr(0), tc(0), pc(0), phase(GAS),
+  m_cp(0), m_latent(0), m_entropy(0), m_enthalpy(0), m_gibbs(0),
+  m_cliq(0), m_enliq(0), m_csld(0), m_ensld(0),
+  m_beta(0), m_gamma(0), m_nshomate(0)
 {
+  prev = NULL;
+  next = NULL;
+
   std::stringstream msg;
   ntotal++;
 
@@ -62,28 +69,28 @@ Molecule::Molecule(ParameterInput *pin)
     throw std::runtime_error(msg.str().c_str());
   }
 
-  std::string name = agas[0];
-  Molecule *molecule;
+  myname = agas[0];
+  Molecule *pmol;
 
-  LoadChemistryFile(folder + name + ".chem");
+  LoadChemistryFile(folder + myname + ".chem");
   phase = GAS;
 
   for (int i = 1; i < ngas; ++i) {
-    name = agas[i];
-    molecule = AddMolecule(name);
-    molecule->LoadChemistryFile(folder + name + ".chem");
-    molecule->phase = GAS;
+    std::string name = agas[i];
+    pmol = AddMolecule(name);
+    pmol->LoadChemistryFile(folder + name + ".chem");
+    pmol->phase = GAS;
   }
 
   for (int i = 0; i < ncloud; ++i) {
-    name = acloud[i];
-    molecule = AddMolecule(name);
-    molecule->LoadChemistryFile(folder + name.substr(0, name.size() - 3) + ".chem");
+    std::string name = acloud[i];
+    pmol = AddMolecule(name);
+    pmol->LoadChemistryFile(folder + name.substr(0, name.size() - 3) + ".chem");
     std::string p = name.substr(name.size() - 3, 3);
     if (p == "(l)")
-      molecule->SetPhase(LIQUID);
+      pmol->SetPhase(LIQUID);
     else if (p == "(s)")
-      molecule->SetPhase(SOLID);
+      pmol->SetPhase(SOLID);
     else {
       msg << "### FATAL ERROR in Molecule " << name << ". Phase not found"
       << std::endl;
@@ -123,7 +130,7 @@ void Molecule::LoadChemistryFile(std::string chemfile)
   std::stringstream inp(DecommentFile(chemfile));
   Real junk;
 
-  inp >> name >> mu
+  inp >> myname >> mu
       >> m_entropy >> m_enthalpy >> m_gibbs >> m_cp
       >> tr >> pr >> tc >> pc; 
   inp >> m_nshomate;
@@ -208,14 +215,14 @@ Real Molecule::SatVaporTemp(Real P, Real Tmin, Real Tmax, Real precision) const
 void Molecule::SetPhase(PhaseID pid)
 {
   if (pid == LIQUID) {
-    name += "(l)";
+    myname += "(l)";
     m_cp = m_cliq;
     m_latent = m_enliq;
     m_beta = (m_latent * 1.E3 - (Cp(tr) - m_cp) * tr) / (Globals::Rgas * tr);
     m_gamma = (m_cp - Cp(tr)) / Globals::Rgas;
     phase = LIQUID;
   } else if (pid == SOLID) {
-    name += "(s)";
+    myname += "(s)";
     m_cp = m_csld;
     m_latent = m_ensld;
     m_beta = (m_latent * 1.E3 - (Cp(tr) - m_cp) * tr) / (Globals::Rgas * tr);
@@ -229,7 +236,7 @@ Molecule* Molecule::GetMolecule(std::string name)
   std::stringstream msg;
   Molecule *p = this;
 
-  while ((p != NULL) && (p->name != name)) p = p->next;
+  while ((p != NULL) && (p->myname != name)) p = p->next;
   if (p == NULL) {
     msg << "### FATAL ERROR in Molecule:GetMolecule " << name << " not found" <<
     std::endl;
@@ -243,7 +250,7 @@ Molecule const* Molecule::GetMolecule(std::string name) const
   std::stringstream msg;
   Molecule const *p = this;
 
-  while ((p != NULL) && (p->name != name)) p = p->next;
+  while ((p != NULL) && (p->myname != name)) p = p->next;
   if (p == NULL) {
     msg << "### FATAL ERROR in Molecule:GetMolecule " << name << " not found" <<
     std::endl;
@@ -259,7 +266,7 @@ int Molecule::GetMoleculeId(std::string name) const
   Molecule const *p = this;
   int id = 0;
 
-  while ((p != NULL) && (p->name != name)) {
+  while ((p != NULL) && (p->myname != name)) {
     p = p->next;
     id++;
   }

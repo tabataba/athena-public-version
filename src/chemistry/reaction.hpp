@@ -32,6 +32,8 @@ struct Reaction {
 
 std::ostream& operator<<(std::ostream &os, Reaction const& rc);
 
+Real NullReaction(Reaction const& rc, Real const prim[], Real time);
+
 class ReactionGroup {
 public:
   ReactionGroup(MeshBlock *pmb, std::string _name);
@@ -45,10 +47,11 @@ public:
   // functions
   ReactionGroup* AddReactionGroup(std::string name);
   ReactionGroup* AddReaction(ParameterInput *pin, std::string block,
-    std::string tag, Molecule *pmol, ReactionFunc_t pfunc_);
+    std::string tag, Molecule *pmol, ReactionFunc_t pfunc_ = NullReaction);
   ReactionGroup* GetReactionGroup(std::string name);
-  int GetReactionId(std::string tag) const;
-  void SetReactionFunction(int i, ReactionFunc_t pfunc);
+  Reaction& GetReaction(std::string tag);
+  Reaction const& GetReaction(std::string tag) const;
+  void SetReactionFunction(std::string tag, ReactionFunc_t pfunc);
   void CalculateReactionRates(std::vector<Real>& rates, Real time,
     AthenaArray<Real> const& prim, int i, int j, int k);
   Real EvolveOneTimeStep(AthenaArray<Real>& prim, Real& time, Real dtmax, 
@@ -60,11 +63,8 @@ protected:
   std::vector<Real> nrate_;
 };
 
-Real NullReaction(Reaction const& rc, Real const prim[NHYDRO], Real time);
-Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[NHYDRO], Real time);
-Real GasCloudIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time);
-Real LiquidSolidIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time);
-//void EquilibrateSP(Real prim[], EquationOfState *peos, ReactionGroup *prg,
-//  Real entropy, Real pres, Real precision = 1.E-8);
+Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[], Real time);
+Real GasCloudIdeal(Reaction const& rc, Real const prim[], Real time);
+Real LiquidSolidIdeal(Reaction const& rc, Real const prim[], Real time);
 
 #endif

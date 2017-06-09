@@ -6,7 +6,7 @@
 #include "reaction.hpp"
 #include "sat_vapor_pres.hpp"
 
-Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[NHYDRO], Real time)
+Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[], Real time)
 {
   Real rate;
   Real xnh3 = prim[rc.reactor[0]];
@@ -22,7 +22,7 @@ Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[NHYDRO], Real time)
   return rate;
 }
 
-Real GasCloudIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time)
+Real GasCloudIdeal(Reaction const& rc, Real const prim[], Real time)
 {
   Real rate;
   Real tr = rc.coeff[0],
@@ -43,7 +43,7 @@ Real GasCloudIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time)
   return rate;
 }
 
-Real LiquidSolidIdeal(Reaction const& rc, Real const prim[NHYDRO], Real time)
+Real LiquidSolidIdeal(Reaction const& rc, Real const prim[], Real time)
 {
   Real rate;
   Real tr = rc.coeff[0];

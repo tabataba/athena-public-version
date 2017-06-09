@@ -65,7 +65,7 @@ public:
 
   // data
   static int ntotal;
-  std::string name;
+  std::string myname;
   Real mu, tr, pr, tc, pc;
   PhaseID phase;  // Gas, Liquid, Solid
   Molecule *prev, *next;

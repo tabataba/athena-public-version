@@ -204,7 +204,7 @@ void HeterogeneousHydro::PrimitiveToConserved(const AthenaArray<Real> &prim,
 // \!fn Real HeterogeneousHydro::SoundSpeed(Real const prim[])
 // \brief returns adiabatic sound speed given vector of primitive variables
 
-Real HeterogeneousHydro::SoundSpeed(Real const prim[])
+Real HeterogeneousHydro::SoundSpeed(Real const prim[]) const
 {
   Real xt = 1., cv = 0., rho = 0.;
   for (int n = NGAS; n < NCOMP; ++n)
@@ -225,7 +225,7 @@ Real HeterogeneousHydro::SoundSpeed(Real const prim[])
   return sqrt((kappa + 1.)*prim[IPR]/rho);
 }
 
-Real HeterogeneousHydro::HeatCapacityP(Real const prim[])
+Real HeterogeneousHydro::HeatCapacityP(Real const prim[]) const
 {
   Real x1 = 1., cp = 0;
   for (int n = 1; n < NGAS; ++n) {
@@ -240,7 +240,7 @@ Real HeterogeneousHydro::HeatCapacityP(Real const prim[])
   return cp;
 }
 
-Real HeterogeneousHydro::Mass(Real const prim[])
+Real HeterogeneousHydro::Mass(Real const prim[]) const
 {
   Real x1 = 1., mu = 0;
   for (int n = 1; n < NGAS; ++n) {
@@ -255,7 +255,7 @@ Real HeterogeneousHydro::Mass(Real const prim[])
   return mu;
 }
 
-Real HeterogeneousHydro::Entropy(Real const prim[])
+Real HeterogeneousHydro::Entropy(Real const prim[]) const
 {
   Real entropy = 0., x1 = 1., xt = 1.;
   // total gas mixing ratios
@@ -277,7 +277,7 @@ Real HeterogeneousHydro::Entropy(Real const prim[])
   return entropy;
 }
 
-Real HeterogeneousHydro::Enthalpy(Real const prim[])
+Real HeterogeneousHydro::Enthalpy(Real const prim[]) const
 {
   Real enthalpy = 0., x1 = 1.;
   for (int n = 1; n < NGAS; ++n) {
@@ -292,7 +292,7 @@ Real HeterogeneousHydro::Enthalpy(Real const prim[])
   return enthalpy;
 }
 
-Real HeterogeneousHydro::Energy(Real const prim[])
+Real HeterogeneousHydro::Energy(Real const prim[]) const
 {
   Real energy = 0., x1 = 1.;
   for (int n = 1; n < NGAS; ++n) {
@@ -303,6 +303,34 @@ Real HeterogeneousHydro::Energy(Real const prim[])
     energy += (cv_[n]*prim[IT] + latent_[n])*prim[n];
     x1 -= prim[n];
   }
-  energy += cv_[0]*x1;
+  energy += cv_[0]*x1*prim[IT];
   return energy; 
+}
+
+void HeterogeneousHydro::EquilibrateUV(
+  Real prim[], Real u0, Real xt0, Real *cons) const
+{
+  Real xt = 1., cv = 0.;
+  for (int n = NGAS; n < NCOMP; ++n) {
+    u0 -= latent_[n]*prim[n];
+    cv += cv_[n]*prim[n];
+    xt -= prim[n];
+  }
+  Real x1 = xt;
+  for (int n = 1; n < NGAS; ++n) {
+    cv += cv_[n]*prim[n];
+    x1 -= prim[n];
+  }
+  cv += cv_[0]*x1;
+  prim[IPR] *= xt*(u0/cv)/(xt0*prim[IT]);
+  prim[IT] = u0/cv;
+
+  // conservative variable
+  if (cons != NULL) {
+    cons[0] = mu_[0]*x1/xt*prim[IPR]/(Globals::Rgas*prim[IT]);
+    for (int n = 1; n < NGAS; ++n) // gas
+      cons[n] = mu_[n]*prim[n]/xt*prim[IPR]/(Globals::Rgas*prim[IT]);
+    for (int n = NGAS; n < NCOMP; ++n) // cloud
+      cons[n] = prim[n]*mu_[n]/(x1*mu_[0])*cons[0];
+  }
 }

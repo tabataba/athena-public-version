@@ -216,19 +216,36 @@ ReactionGroup* ReactionGroup::GetReactionGroup(std::string name)
   return p;
 }
 
-int ReactionGroup::GetReactionId(std::string tag) const
+Reaction& ReactionGroup::GetReaction(std::string tag)
 {
   for (size_t r = 0; r < rts_.size(); ++r)
     if (rts_[r].tag == tag)
-      return r;
+      return rts_[r];
   std::stringstream msg;
-  msg << "### FATAL ERROR in GetReactionId: " << name << " not found" << std::endl;
+  msg << "### FATAL ERROR in GetReaction: " << tag << " not found" << std::endl;
   throw std::runtime_error(msg.str().c_str());
 }
 
-void ReactionGroup::SetReactionFunction(int i, ReactionFunc_t pfunc)
+Reaction const& ReactionGroup::GetReaction(std::string tag) const
 {
-  fns_[i] = pfunc;
+  for (size_t r = 0; r < rts_.size(); ++r)
+    if (rts_[r].tag == tag)
+      return rts_[r];
+  std::stringstream msg;
+  msg << "### FATAL ERROR in GetReaction: " << tag << " not found" << std::endl;
+  throw std::runtime_error(msg.str().c_str());
+}
+
+void ReactionGroup::SetReactionFunction(std::string tag, ReactionFunc_t pfunc)
+{
+  for (size_t r = 0; r < rts_.size(); ++r)
+    if (rts_[r].tag == tag) {
+      fns_[r] = pfunc;
+      return;
+    }
+  std::stringstream msg;
+  msg << "### FATAL ERROR in SetReactionFunction: " << tag << " not found" << std::endl;
+  throw std::runtime_error(msg.str().c_str());
 }
 
 void ReactionGroup::CalculateReactionRates(std::vector<Real>& rates, Real time,
@@ -293,7 +310,7 @@ Real ReactionGroup::EvolveOneTimeStep(AthenaArray<Real>& prim, Real& time, Real 
   return norm;
 }
 
-Real NullReaction(Reaction const& rc, Real const prim[NHYDRO], Real time)
+Real NullReaction(Reaction const& rc, Real const prim[], Real time)
 {
   return 0.;
 }

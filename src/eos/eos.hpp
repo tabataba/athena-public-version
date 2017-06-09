@@ -39,12 +39,13 @@ public:
     AthenaArray<Real> &cons, Coordinates *pco,
     int is, int ie, int js, int je, int ks, int ke) = 0;
 
-  virtual Real SoundSpeed(Real const prim[]) {return 0.;}
-  virtual Real HeatCapacityP(Real const prim[]) {return 0.;}
-  virtual Real Mass(Real const prim[]) {return 0.;}
-  virtual Real Entropy(Real const prim[]) {return 0.;}
-  virtual Real Energy(Real const prim[]) {return 0.;}
-  virtual Real Enthalpy(Real const prim[]) {return 0.;}
+  virtual Real SoundSpeed(Real const prim[]) const {return 0.;}
+  virtual Real HeatCapacityP(Real const prim[]) const {return 0.;}
+  virtual Real Mass(Real const prim[]) const {return 0.;}
+  virtual Real Entropy(Real const prim[]) const {return 0.;}
+  virtual Real Energy(Real const prim[]) const {return 0.;}
+  virtual Real Enthalpy(Real const prim[]) const {return 0.;}
+  virtual void EquilibrateUV(Real prim[], Real u0, Real xt0, Real *cons = NULL) const {}
 
   Real GetDensityFloor() const {return density_floor_;}
   Real GetPressureFloor() const {return pressure_floor_;}
@@ -105,12 +106,13 @@ public:
     AthenaArray<Real> &cons, Coordinates *pco,
     int is, int ie, int js, int je, int ks, int ke);
 
-  Real SoundSpeed(Real const prim[]);
-  Real HeatCapacityP(Real const prim[]);
-  Real Mass(Real const prim[]);
-  Real Entropy(Real const prim[]);
-  Real Energy(Real const prim[]);
-  Real Enthalpy(Real const prim[]);
+  Real SoundSpeed(Real const prim[]) const;
+  Real HeatCapacityP(Real const prim[]) const;
+  Real Mass(Real const prim[]) const;
+  Real Entropy(Real const prim[]) const;
+  Real Energy(Real const prim[]) const;
+  Real Enthalpy(Real const prim[]) const;
+  void EquilibrateUV(Real prim[], Real u0, Real xt0, Real *cons = NULL) const;
 };
 
 class IsothermalHydro : public EquationOfState {
