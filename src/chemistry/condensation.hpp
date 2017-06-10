@@ -6,7 +6,7 @@
 #include "reaction.hpp"
 #include "sat_vapor_pres.hpp"
 
-Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[], Real time)
+inline Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[], Real alpha = 0.)
 {
   Real rate;
   Real xnh3 = prim[rc.reactor[0]];
@@ -17,12 +17,13 @@ Real GasGasSolidNH4SH(Reaction const& rc, Real const prim[], Real time)
   Real xt = 1.;
   for (int g = NGAS; g < NCOMP; ++g) xt -= prim[g];
   rate = (xnh3+xh2s-4.*s*xt-sqrt(_sqr(xnh3-xh2s)+4.*s*(xt-2.*xnh3)*(xt-2.*xh2s)))/(2.*(1.-4.*s));
-  if (rate > 0.) rate = _min(_min(rate, xnh3), xh2s);
-  if (rate < 0.) rate = _max(rate, -xnh4sh);
+  if (rate > 0.) rate = std::min(std::min(rate, xnh3), xh2s);
+  if (rate < 0.) rate = std::max(rate, -xnh4sh);
   return rate;
 }
 
-Real GasCloudIdeal(Reaction const& rc, Real const prim[], Real time)
+// alpha = L/cv
+inline Real GasCloudIdeal(Reaction const& rc, Real const prim[], Real alpha = 0.)
 {
   Real rate;
   Real tr = rc.coeff[0],
@@ -31,19 +32,19 @@ Real GasCloudIdeal(Reaction const& rc, Real const prim[], Real time)
        gamma = rc.coeff[3];
   Real x1 = prim[rc.reactor[0]];
   Real xc = prim[rc.reactor[1]];
-  Real temp = prim[IT];
-  Real s = SatVaporPresIdeal(temp/tr,pr,beta,gamma)/prim[IPR];
+  Real s = SatVaporPresIdeal(prim[IT]/tr,pr,beta,gamma)/prim[IPR];
   if (s > 1.) return -xc;
   Real xt = 1.;
   for (int g = NGAS; g < NCOMP; ++g) xt -= prim[g];
-  rate = (x1-s*xt)/(1.-s);
+  Real dsdt = s/prim[IT]*(beta/prim[IT]*tr - gamma);
+  rate = (x1 - s*xt)/((1. - s)*(1. - alpha*(xt - x1)/_sqr(1. - s)*dsdt));
   //std::cout << rc.reactor[0] << " " << rc.reactor[1] << " " << rate << " " << s << std::endl;
-  if (rate > 0.) rate = _min(rate, x1);
-  if (rate < 0.) rate = _max(rate, -xc);
+  if (rate > 0.) rate = std::min(rate, x1);
+  if (rate < 0.) rate = std::max(rate, -xc);
   return rate;
 }
 
-Real LiquidSolidIdeal(Reaction const& rc, Real const prim[], Real time)
+inline Real LiquidSolidIdeal(Reaction const& rc, Real const prim[], Real alpha = 0.)
 {
   Real rate;
   Real tr = rc.coeff[0];

@@ -7,15 +7,15 @@
 // Athena++ headers
 #include "../athena.hpp"
 
-Real SatVaporPresIdeal(Real t, Real p, Real beta, Real gamma) {
-    return p * exp((1. - 1. / t) * beta - gamma * log(t));
+inline Real SatVaporPresIdeal(Real t, Real p, Real beta, Real gamma) {
+  return p*exp((1. - 1./t)*beta - gamma*log(t));
 }
 
-Real DlnpDlnTIdeal(Real t, Real beta, Real gamma) {
-    return beta / t - gamma;
+inline Real DlnpDlnTIdeal(Real t, Real beta, Real gamma) {
+  return beta/t - gamma;
 }
 
-Real SatVaporPresH2OUMich(Real T) {
+inline Real SatVaporPresH2OUMich(Real T) {
   Real x =
     -2445.5646/T +
     8.2312*log10(T) -
@@ -25,7 +25,7 @@ Real SatVaporPresH2OUMich(Real T) {
   return pow(10.0,x) * 1.E5 / 760.;
 }
 
-Real SatVaporPresH2OAntoine(Real T)
+inline Real SatVaporPresH2OAntoine(Real T)
 {
   Real result;
   
@@ -41,7 +41,7 @@ Real SatVaporPresH2OAntoine(Real T)
   return 1.E5 * result;
 }
 
-Real SatVaporPresH2OHubner(Real T)
+inline Real SatVaporPresH2OHubner(Real T)
 {
   Real A, B ,C, D;
   A = 4.07023;
@@ -53,7 +53,7 @@ Real SatVaporPresH2OHubner(Real T)
   return pow(10.0, x);
 }
 
-Real SatVaporPresH2OFray(Real T)
+inline Real SatVaporPresH2OFray(Real T)
 {
   Real a[7], x, pt, Tt, tr;
   pt = 6.11657e-03;
@@ -74,7 +74,7 @@ Real SatVaporPresH2OFray(Real T)
   return 1.E5 * pt * exp(1.5*log(tr) + (1 - 1/tr)*x);
 }
 
-Real SatVaporPresH2OBriggsS(Real T)
+inline Real SatVaporPresH2OBriggsS(Real T)
 {
   Real a[6], x;
   if ( T < 273.16 ) {
@@ -95,7 +95,7 @@ Real SatVaporPresH2OBriggsS(Real T)
   return exp(x) / 10.;
 }
 
-Real SatVaporPresH2OBolton(Real T)
+inline Real SatVaporPresH2OBolton(Real T)
 {
   Real result;
   result = 612.2 * exp(17.67 * (T - 273.15) / (T - 29.65));
@@ -103,7 +103,7 @@ Real SatVaporPresH2OBolton(Real T)
   return result;
 }
 
-Real SatVaporPresH2OSmithsonian(Real T)
+inline Real SatVaporPresH2OSmithsonian(Real T)
 {
   Real result;
   result = 100. * exp(23.33086 - 6111.72784 / T + 0.15215 * log(T));
@@ -111,7 +111,7 @@ Real SatVaporPresH2OSmithsonian(Real T)
   return result;
 }
 
-Real SatVaporPresH2OIdeal(Real T)
+inline Real SatVaporPresH2OIdeal(Real T)
 {
   Real betal = 24.88,
          gammal = 5.06,
@@ -124,13 +124,13 @@ Real SatVaporPresH2OIdeal(Real T)
     : SatVaporPresIdeal(T / tr, pr, betas, gammas);
 }
 
-Real SatVaporPresNH3UMich(Real T)
+inline Real SatVaporPresNH3UMich(Real T)
 {
   Real x = -1790.00/T - 1.81630*log10(T) + 14.97593;
   return pow(10.0,x) * 1.E5 / 760.;
 }
 
-Real SatVaporPresNH3Antoine(Real T)
+inline Real SatVaporPresNH3Antoine(Real T)
 {
   Real result;
   if (T < 239.6)
@@ -141,7 +141,7 @@ Real SatVaporPresNH3Antoine(Real T)
   return 1.E5 * result;
 }
 
-Real SatVaporPresNH3Hubner(Real T)
+inline Real SatVaporPresNH3Hubner(Real T)
 {
 
   Real A = 24.3037,
@@ -154,7 +154,7 @@ Real SatVaporPresNH3Hubner(Real T)
   return pow(10.0, x);
 }
 
-Real SatVaporPresNH3BriggsS(Real T)
+inline Real SatVaporPresNH3BriggsS(Real T)
 {
   Real a[6], x;
   if ( T < 195 ) {
@@ -175,7 +175,7 @@ Real SatVaporPresNH3BriggsS(Real T)
   return exp(x) / 10.;
 }
 
-Real SatVaporPresNH3Fray(Real T)
+inline Real SatVaporPresNH3Fray(Real T)
 {
   Real a[7], x = 0;
   a[0] = 1.596e+01;
@@ -192,7 +192,7 @@ Real SatVaporPresNH3Fray(Real T)
    return 1.E5 * exp(x + a[0]);
 }
 
-Real SatVaporPresNH3Ideal(Real T)
+inline Real SatVaporPresNH3Ideal(Real T)
 {
   Real betal = 20.08,
        gammal = 5.62,
@@ -205,7 +205,7 @@ Real SatVaporPresNH3Ideal(Real T)
     : SatVaporPresIdeal(T / tr, pr, betas, gammas);
 }
 
-Real SatVaporPresH2SAntoine(Real T)
+inline Real SatVaporPresH2SAntoine(Real T)
 {
   Real result;
   if (T < 212.8)
@@ -216,7 +216,7 @@ Real SatVaporPresH2SAntoine(Real T)
   return 1.E5 * result;
 }
 
-Real SatVaporPresNH4SHLewis(Real T)
+inline Real SatVaporPresNH4SHLewis(Real T)
 {
   return pow(10., 14.82 - 4705. / T) * 101325. * 101325.;
 }

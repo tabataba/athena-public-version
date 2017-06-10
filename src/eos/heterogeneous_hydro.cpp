@@ -22,6 +22,7 @@
 #include "../globals.hpp"
 #include "../math_funcs.hpp"
 #include "../misc.hpp"
+#include "../chemistry/reaction.hpp"
 
 // HeterogeneousHydro constructor
 
@@ -90,6 +91,11 @@ void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
   int nthreads = pmy_block_->pmy_mesh->GetNumMeshThreads();
 #pragma omp parallel default(shared) num_threads(nthreads)
 {
+  ReactionGroup *prg = NULL;
+  if (pmy_block_->prg != NULL)
+    prg = pmy_block_->prg->GetReactionGroup("condensation");
+
+  Real prim1[NHYDRO];
   for (int k=ks; k<=ke; ++k){
 #pragma omp for schedule(dynamic)
   for (int j=js; j<=je; ++j){
@@ -110,7 +116,7 @@ void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
 
       // molar mixing ratio
       for (int n = 1; n < NCOMP; ++n)
-        prim(n,k,j,i) = cons(n,k,j,i)*Globals::Rgas/(mu_[n]*rck);
+        prim1[n] = cons(n,k,j,i)*Globals::Rgas/(mu_[n]*rck);
 
       // subtract cloud components when calculate pressure
       Real latent = 0.;
@@ -120,18 +126,60 @@ void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
       }
 
       // apply pressure floor, correct total energy
-      prim(IPR,k,j,i) = rck/rc*(cons(IEN,k,j,i)-latent-0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3)));
-      cons(IEN,k,j,i) = (prim(IPR,k,j,i) > pressure_floor_) ?  cons(IEN,k,j,i) :
+      prim1[IPR] = rck/rc*(cons(IEN,k,j,i)-latent-0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3)));
+      cons(IEN,k,j,i) = (prim1[IPR] > pressure_floor_) ?  cons(IEN,k,j,i) :
         (pressure_floor_/rck*rc + 0.5*ohr*(_sqr(m1)+_sqr(m2)+_sqr(m3) + latent));
-      prim(IPR,k,j,i) = _max(prim(IPR,k,j,i), pressure_floor_);
+      prim1[IPR] = _max(prim1[IPR], pressure_floor_);
 
       // temperature
-      prim(IT,k,j,i) = prim(IPR,k,j,i)/rck;
+      prim1[IT] = prim1[IPR]/rck;
 
       // velocity
-      prim(IVX,k,j,i) = ohr*m1;
-      prim(IVY,k,j,i) = ohr*m2;
-      prim(IVZ,k,j,i) = ohr*m3;
+      prim1[IVX] = ohr*m1;
+      prim1[IVY] = ohr*m2;
+      prim1[IVZ] = ohr*m3;
+
+      // chemical equilibrium
+      if (prg != NULL) {
+        // for debug
+        //Real prim2[NHYDRO];
+        //for (int n = 0; n < NHYDRO; ++n) prim2[n] = prim1[n];
+        int status = prg->EquilibrateUV(prim1, this);
+        if (status == 0) { // not converged
+          std::stringstream msg;
+          msg << "### FATAL ERROR in ConservedToPrimitive: EquilibrateUV does not converge." 
+              << std::endl;
+          // for debug
+          //msg << "prim before: ";
+          //for (int n = 0; n < NHYDRO; ++n)
+          //  msg << prim2[n] << " ";
+          //msg << std::endl;
+          msg << "prim after: ";
+          for (int n = 0; n < NHYDRO; ++n)
+            msg << prim1[n] << " ";
+          msg << std::endl;
+          throw std::runtime_error(msg.str().c_str());
+        } else if (status == 1) { // converged and reacted
+          // total gas mixing ratios
+          Real xt = 1.;
+          for (int n = NGAS; n < NCOMP; ++n) xt -= prim1[n];
+
+          // gas density
+          Real x1 = xt;
+          for (int n = 1; n < NGAS; ++n) {
+            cons(n,k,j,i) = mu_[n]*prim1[n]/xt*prim1[IPR]/(Globals::Rgas*prim1[IT]);
+            x1 -= prim1[n];
+          }
+          cons(0,k,j,i) = mu_[0]*x1/xt*prim1[IPR]/(Globals::Rgas*prim1[IT]);
+
+          // cloud density
+          for (int n = NGAS; n < NCOMP; ++n)
+            cons(n,k,j,i) = prim1[n]*mu_[n]/(x1*mu_[0])*cons(0,k,j,i);
+        }
+      }
+
+      // update primitive variables
+      for (int n = 0; n < NHYDRO; ++n) prim(n,k,j,i) = prim1[n];
     }
   }}
 }
@@ -240,14 +288,21 @@ Real HeterogeneousHydro::HeatCapacityP(Real const prim[]) const
   return cp;
 }
 
+Real HeterogeneousHydro::HeatCapacityV(Real const prim[]) const
+{
+  Real x1 = 1., cv = 0;
+  for (int n = 1; n < NCOMP; ++n) {
+    cv += cv_[n]*prim[n];
+    x1 -= prim[n];
+  }
+  cv += cv_[0]*x1;
+  return cv;
+}
+
 Real HeterogeneousHydro::Mass(Real const prim[]) const
 {
   Real x1 = 1., mu = 0;
-  for (int n = 1; n < NGAS; ++n) {
-    mu += mu_[n]*prim[n];
-    x1 -= prim[n];
-  }
-  for (int n = NGAS; n < NCOMP; ++n) {
+  for (int n = 1; n < NCOMP; ++n) {
     mu += mu_[n]*prim[n];
     x1 -= prim[n];
   }
@@ -255,7 +310,7 @@ Real HeterogeneousHydro::Mass(Real const prim[]) const
   return mu;
 }
 
-Real HeterogeneousHydro::Entropy(Real const prim[]) const
+/*Real HeterogeneousHydro::Entropy(Real const prim[]) const
 {
   Real entropy = 0., x1 = 1., xt = 1.;
   // total gas mixing ratios
@@ -333,4 +388,4 @@ void HeterogeneousHydro::EquilibrateUV(
     for (int n = NGAS; n < NCOMP; ++n) // cloud
       cons[n] = prim[n]*mu_[n]/(x1*mu_[0])*cons[0];
   }
-}
+}*/

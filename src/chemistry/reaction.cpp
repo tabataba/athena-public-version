@@ -9,6 +9,7 @@
 #include "molecule.hpp"
 #include "reaction.hpp"
 #include "../athena_arrays.hpp"
+#include "../eos/eos.hpp"
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 #include "../math_funcs.hpp"
@@ -206,13 +207,7 @@ ReactionGroup* ReactionGroup::GetReactionGroup(std::string name)
 {
   std::stringstream msg;
   ReactionGroup *p = this;
-
   while ((p != NULL) && (p->name != name)) p = p->next;
-  if (p == NULL) {
-    msg << "### FATAL ERROR in GetReactionGroup : ReactionGroup " << name << " not found" << std::endl;
-    throw std::runtime_error(msg.str().c_str());
-  }
-
   return p;
 }
 
@@ -249,7 +244,7 @@ void ReactionGroup::SetReactionFunction(std::string tag, ReactionFunc_t pfunc)
 }
 
 void ReactionGroup::CalculateReactionRates(std::vector<Real>& rates, Real time,
-  AthenaArray<Real> const& prim, int i, int j, int k)
+  AthenaArray<Real> const& prim, int i, int j, int k) const
 {
   Real prim1[NHYDRO];
   for (int n = 0; n < NHYDRO; ++n)

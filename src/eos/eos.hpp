@@ -26,6 +26,7 @@ struct FaceField;
 class EquationOfState {
   friend class Hydro;
   friend class HydroSourceTerms;
+  friend class ReactionGroup;
 public:
   EquationOfState(MeshBlock *pmb) :
     pmy_block_(pmb)
@@ -41,16 +42,17 @@ public:
 
   virtual Real SoundSpeed(Real const prim[]) const {return 0.;}
   virtual Real HeatCapacityP(Real const prim[]) const {return 0.;}
+  virtual Real HeatCapacityV(Real const prim[]) const {return 0.;}
   virtual Real Mass(Real const prim[]) const {return 0.;}
-  virtual Real Entropy(Real const prim[]) const {return 0.;}
-  virtual Real Energy(Real const prim[]) const {return 0.;}
-  virtual Real Enthalpy(Real const prim[]) const {return 0.;}
-  virtual void EquilibrateUV(Real prim[], Real u0, Real xt0, Real *cons = NULL) const {}
+  //virtual Real Entropy(Real const prim[]) const {return 0.;}
+  //virtual Real Energy(Real const prim[]) const {return 0.;}
+  //virtual Real Enthalpy(Real const prim[]) const {return 0.;}
 
   Real GetDensityFloor() const {return density_floor_;}
   Real GetPressureFloor() const {return pressure_floor_;}
   Real GetGamma() const {return gamma_;}
   Real GetIsoSoundSpeed() const {return iso_sound_speed_;}
+  //Real GetMu(int n) const {return mu_[n];}
 
 protected:
   MeshBlock *pmy_block_;                        // ptr to MeshBlock containing this EOS
@@ -108,11 +110,12 @@ public:
 
   Real SoundSpeed(Real const prim[]) const;
   Real HeatCapacityP(Real const prim[]) const;
+  Real HeatCapacityV(Real const prim[]) const;
   Real Mass(Real const prim[]) const;
-  Real Entropy(Real const prim[]) const;
-  Real Energy(Real const prim[]) const;
-  Real Enthalpy(Real const prim[]) const;
-  void EquilibrateUV(Real prim[], Real u0, Real xt0, Real *cons = NULL) const;
+  //Real Entropy(Real const prim[]) const;
+  //Real Energy(Real const prim[]) const;
+  //Real Enthalpy(Real const prim[]) const;
+  //void EquilibrateUV(Real prim[], Real u0, Real xt0, Real *cons = NULL) const;
 };
 
 class IsothermalHydro : public EquationOfState {
