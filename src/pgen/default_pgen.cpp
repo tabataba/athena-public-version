@@ -15,6 +15,8 @@
 #include "../athena_arrays.hpp"
 #include "../parameter_input.hpp"
 #include "../mesh/mesh.hpp"
+#include "../eos/eos.hpp"
+#include "../chemistry/reaction.hpp"
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -74,4 +76,27 @@ void __attribute__((weak)) Mesh::UserWorkAfterLoop(ParameterInput *pin)
 {
   // do nothing
   return;
+}
+
+//========================================================================================
+//! \fn void Mesh::UserWorkAfterLoop(ParameterInput *pin)
+//  \brief Function called after main loop is finished for user-defined work.
+//========================================================================================
+
+int __attribute__((weak)) ReactionGroup::EquilibrateTP(Real prim[]) const
+{
+  // return success
+  return 1;
+}
+
+int __attribute__((weak)) ReactionGroup::EquilibrateUV(Real prim[], EquationOfState *peos) const
+{
+  // return success
+  return 1;
+}
+
+int __attribute__((weak)) ReactionGroup::EquilibrateSP(Real prim[], EquationOfState *peos) const
+{
+  // return success
+  return 1;
 }

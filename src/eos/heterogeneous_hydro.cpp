@@ -61,7 +61,7 @@ HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
   for (int i = 0; i < NGAS; ++i)
     latent_[i] = 0.;
   for (int i = NGAS; i < NCOMP; ++i)
-    latent_[i] = atof(str[i].c_str())*1.E3;
+    latent_[i] = atof(str[i-NGAS].c_str())*1.E3;
 
   //density_floor_  = pin->GetOrAddReal("hydro","dfloor",(1024*(FLT_MIN)));
   density_floor_  = 0.;
@@ -157,9 +157,8 @@ void HeterogeneousHydro::ConservedToPrimitive(AthenaArray<Real> &cons,
           msg << "prim after: ";
           for (int n = 0; n < NHYDRO; ++n)
             msg << prim1[n] << " ";
-          msg << std::endl;
           throw std::runtime_error(msg.str().c_str());
-        } else if (status == 1) { // converged and reacted
+        } else if (status == 2) { // converged and reacted
           // total gas mixing ratios
           Real xt = 1.;
           for (int n = NGAS; n < NCOMP; ++n) xt -= prim1[n];

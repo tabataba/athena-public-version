@@ -18,7 +18,7 @@
 inline Real TotalDensity(AthenaArray<Real> const& prim, int i, int j, int k, Real const mu[])
 {
   Real xt = 1., rho = 0.;
-  for (int n = 0; n < NCOMP; ++n)
+  for (int n = NGAS; n < NCOMP; ++n)
     xt -= prim(n,k,j,i);
   Real x1 = xt;
   for (int n = 1; n < NGAS; ++n) {

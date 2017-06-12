@@ -56,7 +56,11 @@ public:
     AthenaArray<Real> const& prim, int i, int j, int k) const;
   Real EvolveOneTimeStep(AthenaArray<Real>& prim, Real& time, Real dtmax, 
     int is, int ie, int js, int je, int ks, int ke);
+
+  // these three functions are implemented by user in pgen
+  int EquilibrateTP(Real prim[]) const;
   int EquilibrateUV(Real prim[], EquationOfState *peos) const;
+  int EquilibrateSP(Real prim[], EquationOfState *peos) const;
 
 protected:
   std::vector<ReactionFunc_t> fns_;

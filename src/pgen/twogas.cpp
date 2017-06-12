@@ -24,16 +24,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   Real psrf = pin->GetReal("problem", "psrf");
   Real tsrf = pin->GetReal("problem", "tsrf");
   Real grav = phydro->psrc->GetG2();
-  Real prim1[NHYDRO];
+  Real prim1[NCOMP];
   AthenaArray<Real>& prim = phydro->w;
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
       for (int i = is; i <= ie; ++i) {
-        for (int n = 0; n < NHYDRO; ++n) prim1[n] = prim(n,k,j,i);
-        Real dz = pcoord->x2v(j) - pcoord->x2v(j-1);
+        prim1[1] = xsrf + (xtop - xsrf)*(j-js)/(je-js);
         Real cp = peos->HeatCapacityP(prim1);
         Real mu = peos->Mass(prim1);
-        prim(1,k,j,i)   = xsrf + (xtop - xsrf)*(j-js)/(je-js);
+        Real dz = pcoord->dx2f(j);
+        prim(1,k,j,i)   = prim1[1];
         prim(IT,k,j,i)  = j == js ? tsrf : prim(IT,k,j-1,i) + mu*grav/cp*dz;
         prim(IPR,k,j,i) = j == js ? psrf :
           prim(IPR,k,j-1,i)*pow(prim(IT,k,j,i)/prim(IT,k,j-1,i), cp/Globals::Rgas);
