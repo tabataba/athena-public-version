@@ -64,7 +64,6 @@ public:
   virtual ~Molecule();
 
   // data
-  static int ntotal;
   std::string myname;
   Real mu, tr, pr, tc, pc;
   PhaseID phase;  // Gas, Liquid, Solid
@@ -73,6 +72,7 @@ public:
   // functions
   Molecule* AddMolecule(std::string name);
   void LoadChemistryFile(std::string chemfile);
+  int TotalNumber();
   virtual Real Cp(Real T) const;
   virtual Real Enthalpy(Real T) const;
   virtual Real Entropy(Real T) const;

@@ -21,7 +21,7 @@
 #include "../globals.hpp"
 #include "../misc.hpp"
 
-Real mutop, mubot, cpbot, cptop, xbot[NCOMP], ttop, grav;
+Real mutop, mubot, cpbot, cptop, xbot[NCOMP], ttop, grav, crate;
 
 void ProjectPressureInnerX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
      FaceField &b, Real time, Real dt, int is, int ie, int js, int je, int ks, int ke)
@@ -29,8 +29,8 @@ void ProjectPressureInnerX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> 
   for (int k = ks; k <= ke; ++k)
     for (int j = 1; j <= NGHOST; ++j)
       for (int i = is; i <= ie; ++i) {
-        prim(IVX,k,js-j,i) = prim(IVX,k,js-j,i);
-        prim(IVY,k,js-j,i) = -prim(IVY,k,js-j,i);
+        prim(IVX,k,js-j,i) = prim(IVX,k,js+j-1,i);
+        prim(IVY,k,js-j,i) = -prim(IVY,k,js+j-1,i);
         // adiabatic projection
         prim(IT,k,js-j,i)  = prim(IT,k,js+j-1,i) + mubot*grav/cpbot*(2*j-1)*pco->dx2f(js);
         prim(IPR,k,js-j,i) = prim(IPR,k,js+j-1,i)
@@ -51,7 +51,7 @@ void ProjectPressureOuterX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> 
         // isothermal projection
         prim(IT,k,je+j,i) = ttop;
         prim(IPR,k,je+j,i) = prim(IPR,k,je-j+1,i)
-          *exp(-mutop*grav/(Globals::Rgas*ttop)*(2*j-1)*pco->dx2f(j));
+          *exp(-mutop*grav/(Globals::Rgas*ttop)*(2*j-1)*pco->dx2f(je));
         for (int n = 1; n < NCOMP; ++n)
           prim(n,k,je+j,i) = 0.;
         // adiabatic projection
@@ -63,43 +63,74 @@ void ProjectPressureOuterX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> 
       }
 }
 
-/*void JovianAtmMicrophysics(MeshBlock *pmb, const Real time, const Real dt, const int step,
+void ProjectPressureInnerX3(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
+     FaceField &b, Real time, Real dt, int is, int ie, int js, int je, int ks, int ke)
+{
+  for (int k = 1; k <= NGHOST; ++k)
+    for (int j = js; j <= je; ++j)
+      for (int i = is; i <= ie; ++i) {
+        prim(IVX,ks-k,j,i) = prim(IVX,ks+k-1,j,i);
+        prim(IVY,ks-k,j,i) = prim(IVY,ks+k-1,j,i);
+        prim(IVZ,ks-k,j,i) = -prim(IVZ,ks+k-1,j,i);
+        // adiabatic projection
+        prim(IT,ks-k,j,i)  = prim(IT,ks+k-1,j,i) + mubot*grav/cpbot*(2*k-1)*pco->dx3f(ks);
+        prim(IPR,ks-k,j,i) = prim(IPR,ks+k-1,j,i)
+          *pow(prim(IT,ks-k,j,i)/prim(IT,ks+k-1,j,i), cpbot/Globals::Rgas);
+        for (int n = 1; n < NCOMP; ++n)
+          prim(n,ks-k,j,i) = xbot[n];
+      }
+}
+
+void ProjectPressureOuterX3(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
+     FaceField &b, Real time, Real dt, int is, int ie, int js, int je, int ks, int ke)
+{
+  for (int k = 1; k <= NGHOST; ++k)
+    for (int j = js; j <= je; ++j)
+      for (int i = is; i <= ie; ++i) {
+        prim(IVX,ke+k,j,i) = prim(IVX,ke-k+1,j,i);
+        prim(IVY,ke+k,j,i) = prim(IVY,ke-k+1,j,i);
+        prim(IVZ,ke+k,j,i) = -prim(IVZ,ke-k+1,j,i);
+        // isothermal projection
+        prim(IT,ke+k,j,i) = ttop;
+        prim(IPR,ke+k,j,i) = prim(IPR,ke-k+1,j,i)
+          *exp(-mutop*grav/(Globals::Rgas*ttop)*(2*k-1)*pco->dx3f(ke));
+        for (int n = 1; n < NCOMP; ++n)
+          prim(n,ke+k,j,i) = 0.;
+      }
+}
+
+void ConstantCoolingRate(MeshBlock *pmb, const Real time, const Real dt, const int step,
   const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &cons)
 {
-  if (step == 1) return;
-  Reaction const& r1 = pmb->prg->GetReaction("r1");
-  Reaction const& r2 = pmb->prg->GetReaction("r2");
-  EquationOfState *peos = pmb->peos;
+  Coordinates *pcoord = pmb->pcoord;
 
-  Real rate, prim[NHYDRO];
-  for (int k = pmb->ks; k <= pmb->ke; ++k)
-    for (int j = pmb->js; j <= pmb->je; ++j)
-      for (int i = pmb->is; i <= pmb->ie; ++i) {
-        Real xt = 1.;
-        for (int n = NGAS; n < NCOMP; ++n) {
-          prim[n] = prim(n,k,j,i);
-          xt -= prim[n];
-        }
-        for (int n = 0; n < NGAS; ++n)
-          prim[n] = prim(n,k,j,i);
-        for (int n = NCOMP; n < NHYDRO; ++n)
-          prim[n] = prim(n,k,j,i);
-        Real rho1 = prim[IPR]/(xt*Globals::Rgas*prim[IT]);
-        rate = GasCloudIdeal(r1, prim, time);
-        for (int n = 0; n < 2; ++n)
-          cons(r1.reactor[n],k,j,i) += rho1*rate*r1.measure[n]*peos->GetMu(r1.reactor[n]);
-        rate = GasCloudIdeal(r2, prim, time);
-        for (int n = 0; n < 2; ++n)
-          cons(r2.reactor[n],k,j,i) += rho1*rate*r2.measure[n]*peos->GetMu(r2.reactor[n]);
-      }
-}*/
-
+  if (pmb->pmy_mesh->mesh_size.nx3 == 1) { // 2D problem
+    for (int k = pmb->ks; k <= pmb->ke; ++k)
+      for (int j = pmb->js; j <= pmb->je; ++j) 
+        if (pcoord->x2v(j) > -35.E3)
+          for (int i = pmb->is; i <= pmb->ie; ++i) {
+            cons(IEN,k,j,i) -= 2.5*prim(IPR,k,j,i)*crate/prim(IT,k,j,i)*dt;
+          }
+  } else {  // 3D problem
+    for (int k = pmb->ks; k <= pmb->ke; ++k)
+      if (pcoord->x3v(k) > -35.E3)
+        for (int j = pmb->js; j <= pmb->je; ++j) 
+          for (int i = pmb->is; i <= pmb->ie; ++i) {
+            cons(IEN,k,j,i) -= 2.5*prim(IPR,k,j,i)*crate/prim(IT,k,j,i)*dt;
+          }
+  }
+}
 
 void Mesh::InitUserMeshData(ParameterInput *pin)
 {
-  EnrollUserBoundaryFunction(INNER_X2, ProjectPressureInnerX2);
-  EnrollUserBoundaryFunction(OUTER_X2, ProjectPressureOuterX2);
-  //EnrollUserExplicitSourceFunction(JovianAtmMicrophysics);
+  if (mesh_size.nx3 == 1) { // 2D problem
+    EnrollUserBoundaryFunction(INNER_X2, ProjectPressureInnerX2);
+    EnrollUserBoundaryFunction(OUTER_X2, ProjectPressureOuterX2);
+  } else {  // 3D problem
+    EnrollUserBoundaryFunction(INNER_X3, ProjectPressureInnerX3);
+    EnrollUserBoundaryFunction(OUTER_X3, ProjectPressureOuterX3);
+  }
+  EnrollUserExplicitSourceFunction(ConstantCoolingRate);
 }
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin)
@@ -107,8 +138,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   std::stringstream msg;
   // Step 1. define molecules
   pmol = new Molecule(pin);
-  if (Molecule::ntotal != NCOMP) {
-    msg << "### FATAL ERROR in ProblemGenerator: Molecule::ntotal != NMOL" << std::endl;
+  if (pmol->TotalNumber() != NCOMP) {
+    msg << "### FATAL ERROR in ProblemGenerator: pmol->TotalNumber() != NMOL" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
 
@@ -116,12 +147,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   prg = new ReactionGroup(this, "condensation");
   prg->AddReaction(pin, "chemistry", "r1", pmol);
   prg->AddReaction(pin, "chemistry", "r2", pmol);
-
-  // debug
-  //Real aa[NHYDRO] = {280.,5.E-3,0.,0.,0.,0.,0.,0.,7.E5};
-  //prg->EquilibrateUV(aa, peos);
-  //for (int n = 0; n < NHYDRO; ++n) std::cout << aa[n] << std::endl;
-  //exit(1.);
 
   // Step 3. define boundary conditions
   std::vector<std::string> xbot_str;
@@ -132,7 +157,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   Real prim[NHYDRO];
 
   ttop = tref;
-  grav = - phydro->psrc->GetG2();
   for (size_t n = 0; n < xbot_str.size(); ++n)
     xbot[n + 1] = atof(xbot_str[n].c_str());
   for (int n = NGAS; n < NCOMP; ++n) xbot[n] = 0.;
@@ -145,13 +169,25 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   mutop = peos->Mass(prim);
   cptop = peos->HeatCapacityP(prim);
 
-  // Step 4. construct adiabatic T-P profile from top down
+  // Step 4. construct 1D adiabatic T-P profile from top down
   // 4.1) T-P profile outside of this MeshBlock
-  Real dz = pcoord->dx2f(je), ztop = pmy_mesh->mesh_size.x2max;
+  Real dz, ztop, zmbtop;
+  int nx3 = pmy_mesh->mesh_size.nx3;
+  grav = nx3 == 1 ? -phydro->psrc->GetG2() : -phydro->psrc->GetG3();
+
+  if (nx3 == 1) { // 2D
+    dz = pcoord->dx2f(je);
+    ztop = pmy_mesh->mesh_size.x2max;
+    zmbtop = pcoord->x2v(je);
+  } else {  // 3D
+    dz = pcoord->dx3f(ke);
+    ztop = pmy_mesh->mesh_size.x3max;
+    zmbtop = pcoord->x3v(ke);
+  }
   Real mu = mutop, cp = peos->HeatCapacityP(prim);
   prim[IPR] = ptop;
   prim[IT ] = ttop;
-  for (; ztop > pcoord->x2v(je); ztop -= dz) {
+  for (; ztop > zmbtop; ztop -= dz) {
     if (prim[IPR] < pref) {  // isothermal atm
       prim[IPR] *= exp(mu*grav*dz/(Globals::Rgas*tref));
     } else {  // adiabatic atm
@@ -178,9 +214,17 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   ztop += dz;
 
   // 4.2) T-P profile of this MeshBlock and add pertubation
-  for (int j = je; j >= js; --j) {
-    if (j == je) dz = ztop - pcoord->x2v(j);
-    else dz = pcoord->dx2f(j);
+  int start, end;
+  if (nx3 == 1) { // 2D
+    start = js;
+    end = je;
+  } else {
+    start = ks;
+    end = ke;
+  }
+  for (int m = end; m >= start; --m) {
+    if (m == end) dz = ztop - zmbtop;
+    else dz = nx3 == 1 ? pcoord->dx2f(m) : pcoord->dx3f(m);
 
     if (prim[IPR] < pref) { // isothermal atm
       prim[IPR] *= exp(mu*grav*dz/(Globals::Rgas*tref));
@@ -207,8 +251,13 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
     mu = peos->Mass(prim);
 
     // copy to primitive variables
-    for (int n = 0; n < NHYDRO; ++n)
-      phydro->w(n,ks,j,is) = prim[n];
+    if (nx3 == 1) { // 2D
+      for (int n = 0; n < NHYDRO; ++n)
+        phydro->w(n,ks,m,is) = prim[n];
+    } else {  // 3D
+      for (int n = 0; n < NHYDRO; ++n)
+        phydro->w(n,m,js,is) = prim[n];
+    }
   }
 
   // 4.3) propagate T-P profile to the whole domain, add noise
@@ -220,13 +269,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)
         for (int i = is; i <= ie; ++i) {
-          phydro->w(n,k,j,i) = phydro->w(n,ks,j,is);
+          if (nx3 == 1) { // 2D
+            phydro->w(n,k,j,i) = phydro->w(n,ks,j,is);
+          } else {  // 3D
+            phydro->w(n,k,j,i) = phydro->w(n,k,js,is);
+          }
           if (n == IVY)
-            phydro->w(n,k,j,i) = 100.*(ran2(&iseed)-0.5)
+            phydro->w(n,k,j,i) = 1.*(ran2(&iseed)-0.5)
               *(1.0+cos(kx*pcoord->x1v(i)))*(1.0+cos(ky*pcoord->x2v(j)))/4.0;
         }
 
-  // Step 5. convert primitive variables to conserved variables
+  // Step 5. Cooling rate
+  crate = pin->GetReal("problem", "crate");
+
+  // Step 6. convert primitive variables to conserved variables
   peos->PrimitiveToConserved(phydro->w, pfield->bcc, phydro->u, pcoord, is, ie, js, je, ks, ke);
 }
 

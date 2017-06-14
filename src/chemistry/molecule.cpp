@@ -10,8 +10,6 @@
 #include "../globals.hpp"
 #include "molecule.hpp"
 
-int Molecule::ntotal = 0;
-
 std::ostream& operator<<(std::ostream &os, Molecule const& mol)
 {
   os << "name: " << mol.myname << std::endl
@@ -38,8 +36,6 @@ Molecule::Molecule(std::string name):
       m_shomate[i][j] = 0.;
   for (int i = 0; i < MAXSHOMATE; ++i)
     m_shomate_sp[i] = 0.;
-
-  ntotal++;
 }
 
 Molecule::Molecule(ParameterInput *pin):
@@ -52,7 +48,6 @@ Molecule::Molecule(ParameterInput *pin):
   next = NULL;
 
   std::stringstream msg;
-  ntotal++;
 
   std::string gas = pin->GetString("chemistry", "gas");
   std::string cloud = pin->GetOrAddString("chemistry", "cloud", "");
@@ -104,7 +99,6 @@ Molecule::~Molecule()
 {
   if (prev != NULL) prev->next = next;
   if (next != NULL) next->prev = prev;
-  ntotal--;
 }
 
 Molecule* Molecule::AddMolecule(std::string name)
@@ -145,6 +139,17 @@ void Molecule::LoadChemistryFile(std::string chemfile)
       >> m_csld >> m_ensld;
 
   mu *= 1.E-3;  // g/mol -> kg/mol
+}
+
+int Molecule::TotalNumber()
+{
+  int ntotal = 1;
+  Molecule *p = this;
+  while (p->next != NULL) {
+    p = p->next;
+    ntotal++;
+  }
+  return ntotal;
 }
 
 Real Molecule::Cp(Real T) const 
