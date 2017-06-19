@@ -26,32 +26,10 @@
 Real mutop, mubot, cpbot, cptop, xbot[NCOMP], ttop, grav;
 
 // forcing
-Real crate, autoc, terminalv, evap;
+Real crate, autoc, terminalv, evap, cloudmax;
 
 // chemistry
 int iH2O = 1, iNH3 = 2, iH2Os = 3, iNH3s = 4;
-
-// total density, modifed from hydro/rsolvers/roe_heterogeneous.cpp
-inline Real TotalDensity(AthenaArray<Real> const& prim, int i, int j, int k,
-  Real const mu[], Real rhon[])
-{
-  Real xt = 1., rho = 0.;
-  for (int n = NGAS; n < NCOMP; ++n)
-    xt -= prim(n,k,j,i);
-  Real x1 = xt;
-  for (int n = 1; n < NGAS; ++n) {
-    rhon[n] = prim(n,k,j,i)/xt*prim(IPR,k,j,i)*mu[n]/(Globals::Rgas*prim(IT,k,j,i));
-    x1 -= prim(n,k,j,i);
-    rho += rhon[n];
-  }
-  rhon[0] = x1/xt*prim(IPR,k,j,i)*mu[0]/(Globals::Rgas*prim(IT,k,j,i));
-  rho += rhon[0];
-  for (int n = NGAS; n < NCOMP; ++n) {
-    rhon[n] = (prim(n,k,j,i)*mu[n])/(x1*mu[0])*rhon[0];
-    rho += rhon[n];
-  }
-  return rho;
-}
 
 void ProjectPressureInnerX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
      FaceField &b, Real time, Real dt, int is, int ie, int js, int je, int ks, int ke)
@@ -160,7 +138,7 @@ void Hydro::SourceTerm(const Real time, const Real dt, const int step,
         // cloud turns into precipitation
         Real ctime = pcoord->dx2f(j)/terminalv;
         if (time - tlast_conversion(k,j,i) > ctime &&
-          (prim(iH2Os,k,j,i) > TINY_NUMBER || prim(iNH3s,k,j,i) > TINY_NUMBER)) {
+          (prim(iH2Os,k,j,i) > cloudmax || prim(iNH3s,k,j,i) > cloudmax)) {
           Particle rain;
           rain.time = time;
           rain.x1 = pcoord->x1v(i);
@@ -248,7 +226,6 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
   ruser_meshblock_data[0].NewAthenaArray(ncells3,ncells2,ncells1);
 
   terminalv = pin->GetReal("problem", "terminalv");
-  evap = pin->GetReal("problem", "evap");
   Real dz = ncells3 == 1 ? pcoord->dx2f(je) : pcoord->dx3f(ke);
   Real ctime = dz/terminalv;
   long int iseed = -1 - Globals::my_rank;
@@ -275,6 +252,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 
   // Step 3. define precipitation
   ppg = new ParticleGroup(this, "rain");
+  evap      = pin->GetReal("problem", "evap");
+  terminalv = pin->GetReal("problem", "terminalv");
+  autoc     = pin->GetReal("problem", "autoc");
+  cloudmax  = pin->GetReal("problem", "cloudmax");
 
   // Step 4. define boundary conditions
   std::vector<std::string> xbot_str;
