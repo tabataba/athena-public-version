@@ -52,6 +52,7 @@ public:
   Real GetPressureFloor() const {return pressure_floor_;}
   Real GetGamma() const {return gamma_;}
   Real GetIsoSoundSpeed() const {return iso_sound_speed_;}
+  Real GetCv(int n) const {return cv_[n];}
   //Real GetMu(int n) const {return mu_[n];}
 
 protected:

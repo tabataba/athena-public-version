@@ -6,18 +6,18 @@
 #include "../hydro/hydro.hpp"
 #include "../math_funcs.hpp" // _interpn
 
-void ParticleGroup::PropertyUpdate(Real time, Real dt)
+void ParticleGroup::PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
+  AthenaArray<Real>& cons)
 {
   AthenaArray<Real> v1, v2, v3;
   Real loc[3];
-  int  cid[3] = {0, 0, 0};
+  int  kji[3] = {0, 0, 0};
 
   MeshBlock *pmb = pmy_block;
-  Hydro *phydro = pmb->phydro;
 
-  v1.InitWithShallowSlice(phydro->w,4,IM1,1);
-  v2.InitWithShallowSlice(phydro->w,4,IM2,1);
-  v3.InitWithShallowSlice(phydro->w,4,IM3,1);
+  v1.InitWithShallowSlice(prim,4,IM1,1);
+  v2.InitWithShallowSlice(prim,4,IM2,1);
+  v3.InitWithShallowSlice(prim,4,IM3,1);
 
   Real x1min = pmb->block_size.x1min;
   Real x1max = pmb->block_size.x1max;
@@ -46,14 +46,14 @@ void ParticleGroup::PropertyUpdate(Real time, Real dt)
       q[i].v3 = 0.;
 
     if (lengths_[0] > 1)
-      cid[0] = pmy_block->ks + _locate(coordinates_, loc[0], lengths_[0]);
+      kji[0] = pmb->ks + _locate(coordinates_, loc[0], lengths_[0]);
     if (lengths_[1] > 1)
-      cid[1] = pmy_block->js + _locate(coordinates_ + lengths_[0], loc[1], lengths_[1]);
-    cid[2] = pmy_block->is + _locate(coordinates_ + lengths_[0] + lengths_[1], loc[2], lengths_[2]);
+      kji[1] = pmb->js + _locate(coordinates_ + lengths_[0], loc[1], lengths_[1]);
+    kji[2] = pmb->is + _locate(coordinates_ + lengths_[0] + lengths_[1], loc[2], lengths_[2]);
 
     bool alive;
     if (particle_fn_ != NULL)
-      alive = particle_fn_(pmb, q[i], cid, time, dt);
+      alive = particle_fn_(pmb, time, dt, q[i], prim, cons, kji);
     else
       alive = true;
 

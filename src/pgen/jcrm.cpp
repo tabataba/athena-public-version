@@ -17,11 +17,41 @@
 #include "../chemistry/reaction.hpp"
 #include "../chemistry/molecule.hpp"
 #include "../chemistry/condensation.hpp"
+#include "../particle/particle.hpp"
 #include "../utils/utils.hpp"
 #include "../globals.hpp"
 #include "../misc.hpp"
 
-Real mutop, mubot, cpbot, cptop, xbot[NCOMP], ttop, grav, crate;
+// boundary condition
+Real mutop, mubot, cpbot, cptop, xbot[NCOMP], ttop, grav;
+
+// forcing
+Real crate, autoconversion, terminalv, evap;
+
+// chemistry
+int iH2O = 1, iNH3 = 2, iH2Os = 3, iNH3s = 4;
+
+// total density, modifed from hydro/rsolvers/roe_heterogeneous.cpp
+inline Real TotalDensity(AthenaArray<Real> const& prim, int i, int j, int k,
+  Real const mu[], Real rhon[])
+{
+  Real xt = 1., rho = 0.;
+  for (int n = NGAS; n < NCOMP; ++n)
+    xt -= prim(n,k,j,i);
+  Real x1 = xt;
+  for (int n = 1; n < NGAS; ++n) {
+    rhon[n] = prim(n,k,j,i)/xt*prim(IPR,k,j,i)*mu[n]/(Globals::Rgas*prim(IT,k,j,i));
+    x1 -= prim(n,k,j,i);
+    rho += rhon[n];
+  }
+  rhon[0] = x1/xt*prim(IPR,k,j,i)*mu[0]/(Globals::Rgas*prim(IT,k,j,i));
+  rho += rhon[0];
+  for (int n = NGAS; n < NCOMP; ++n) {
+    rhon[n] = (prim(n,k,j,i)*mu[n])/(x1*mu[0])*rhon[0];
+    rho += rhon[n];
+  }
+  return rho;
+}
 
 void ProjectPressureInnerX2(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
      FaceField &b, Real time, Real dt, int is, int ie, int js, int je, int ks, int ke)
@@ -99,26 +129,101 @@ void ProjectPressureOuterX3(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> 
       }
 }
 
-void ConstantCoolingRate(MeshBlock *pmb, const Real time, const Real dt, const int step,
+void Hydro::SourceTerm(const Real time, const Real dt, const int step,
   const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &cons)
 {
+  MeshBlock *pmb = pmy_block;
   Coordinates *pcoord = pmb->pcoord;
+  AthenaArray<Real>& tlast_conversion = pmb->ruser_meshblock_data[0];
+  AthenaArray<Real>& rho_h2o = pmb->ruser_meshblock_data[1];
+  AthenaArray<Real>& rho_nh3 = pmb->ruser_meshblock_data[2];
+  Real rhon[NCOMP], rho;
+  int nx3 = pmb->pmy_mesh->mesh_size.nx3;
 
-  if (pmb->pmy_mesh->mesh_size.nx3 == 1) { // 2D problem
-    for (int k = pmb->ks; k <= pmb->ke; ++k)
-      for (int j = pmb->js; j <= pmb->je; ++j) 
-        if (pcoord->x2v(j) > -35.E3)
-          for (int i = pmb->is; i <= pmb->ie; ++i) {
-            cons(IEN,k,j,i) -= 2.5*prim(IPR,k,j,i)*crate/prim(IT,k,j,i)*dt;
-          }
-  } else {  // 3D problem
-    for (int k = pmb->ks; k <= pmb->ke; ++k)
-      if (pcoord->x3v(k) > -35.E3)
-        for (int j = pmb->js; j <= pmb->je; ++j) 
-          for (int i = pmb->is; i <= pmb->ie; ++i) {
-            cons(IEN,k,j,i) -= 2.5*prim(IPR,k,j,i)*crate/prim(IT,k,j,i)*dt;
-          }
-  }
+  for (int k = pmb->ks; k <= pmb->ke; ++k)
+    for (int j = pmb->js; j <= pmb->je; ++j) {
+      Real height = nx3 == 1 ? pcoord->x2v(j) : pcoord->x3v(k);
+      for (int i = pmb->is; i <= pmb->ie; ++i) {
+        // radiative forcing above 1 bar
+        if (height > -35.E3) 
+          cons(IEN,k,j,i) -= 2.5*prim(IPR,k,j,i)*crate/prim(IT,k,j,i)*dt;
+
+        // gravity
+        rho = TotalDensity(prim, i, j, k, pmb->peos->mu_, rhon);
+        rho_h2o(k,j,i) = rhon[iH2O];
+        rho_nh3(k,j,i) = rhon[iNH3];
+        if (nx3 == 1) {
+          cons(IM2,k,j,i) += -dt*rho*grav;
+          cons(IEN,k,j,i) += -dt*rho*grav*prim(IVY,k,j,i);
+        } else {
+          cons(IM3,k,j,i) += -dt*rho*grav;
+          cons(IEN,k,j,i) += -dt*rho*grav*prim(IVZ,k,j,i);
+        }
+
+        // cloud turns into precipitation
+        Real ctime = 0.5*pcoord->dx2f(j)/terminalv;
+        if (time - tlast_conversion(k,j,i) > ctime &&
+          (prim(iH2Os,k,j,i) > TINY_NUMBER || prim(iNH3s,k,j,i) > TINY_NUMBER)) {
+          Particle rain;
+          rain.time = time;
+          rain.x1 = pcoord->x1v(i);
+          rain.x2 = pcoord->x2v(j);
+          rain.x3 = pcoord->x3v(k);
+
+          rain.rdata[0] = std::min(cons(iH2Os,k,j,i), 
+            rhon[iH2Os]*ctime/(autoconversion + ctime));
+          rain.rdata[1] = std::min(cons(iNH3s,k,j,i), 
+            rhon[iNH3s]*ctime/(autoconversion + ctime));
+
+          cons(iH2Os,k,j,i) -= rain.rdata[0];
+          cons(iNH3s,k,j,i) -= rain.rdata[1];
+          cons(IM1,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVX,k,j,i);
+          cons(IM2,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVY,k,j,i);
+          cons(IM3,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVZ,k,j,i);
+          cons(IEN,k,j,i) -= rain.rdata[0]*pmb->peos->cv_[iH2Os]*prim(IT,k,j,i) +
+                             rain.rdata[1]*pmb->peos->cv_[iNH3s]*prim(IT,k,j,i);
+
+          pmb->ppg->q.push_back(rain);
+          tlast_conversion(k,j,i) = time;
+        }
+      }
+    }
+}
+
+bool PrecipitationEvaporation(MeshBlock *pmb, Real const time, Real const dt,
+  Particle &pt, AthenaArray<Real> const& prim, AthenaArray<Real>& cons, int kji[3])
+{
+  int k = kji[0], j = kji[1], i = kji[2];
+  Real rhon[NCOMP], satx, xt = 1.;
+  for (int n = NGAS; n < NCOMP; ++n) xt -= prim(n,k,j,i);
+
+  Real rho_h2o = pmb->ruser_meshblock_data[1](k,j,i);
+  Real rho_nh3 = pmb->ruser_meshblock_data[2](k,j,i);
+
+  // evaporation
+  satx = SatVaporPresH2OIdeal(prim(IT,k,j,i))/prim(IPR,k,j,i)*xt;
+  Real evap_h2o = _min((satx/prim(iH2O,k,j,i) - 1.)*rho_h2o, evap*dt, pt.rdata[0]);
+  satx = SatVaporPresNH3Ideal(prim(IT,k,j,i))/prim(IPR,k,j,i)*xt;
+  Real evap_nh3 = _min((satx/prim(iNH3,k,j,i) - 1.)*rho_nh3, evap*dt, pt.rdata[1]);
+  pt.rdata[0] -= std::max(evap_h2o, 0.);
+  pt.rdata[1] -= std::max(evap_nh3, 0.);
+
+  cons(iH2Os,k,j,i) += evap_h2o;
+  cons(iNH3s,k,j,i) += evap_nh3;
+  cons(IM1,k,j,i) += (evap_h2o + evap_nh3)*prim(IVX,k,j,i);
+  cons(IM2,k,j,i) += (evap_h2o + evap_nh3)*prim(IVY,k,j,i);
+  cons(IM3,k,j,i) += (evap_h2o + evap_nh3)*prim(IVZ,k,j,i);
+  cons(IEN,k,j,i) += evap_h2o*pmb->peos->GetCv(iH2Os)*prim(IT,k,j,i) +
+                     evap_h2o*pmb->peos->GetCv(iNH3s)*prim(IT,k,j,i);
+
+  if ((pt.rdata[0] < TINY_NUMBER) && (pt.rdata[1] < TINY_NUMBER))
+    return false;
+
+  // update particle position
+  pt.x1 += pt.v1*dt;
+  pt.x2 += (pt.v2 - terminalv)*dt;
+
+  return true;
 }
 
 void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -130,7 +235,31 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
     EnrollUserBoundaryFunction(INNER_X3, ProjectPressureInnerX3);
     EnrollUserBoundaryFunction(OUTER_X3, ProjectPressureOuterX3);
   }
-  EnrollUserExplicitSourceFunction(ConstantCoolingRate);
+  EnrollUserParticleUpdateFunction(PrecipitationEvaporation);
+}
+
+void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
+{
+  int ncells1 = block_size.nx1 + 2*(NGHOST);
+  int ncells2 = 1, ncells3 = 1;
+  if (block_size.nx2 > 1) ncells2 = block_size.nx2 + 2*(NGHOST);
+  if (block_size.nx3 > 1) ncells3 = block_size.nx3 + 2*(NGHOST);
+
+  // initialize autoconversion time
+  AllocateRealUserMeshBlockDataField(3);
+  ruser_meshblock_data[0].NewAthenaArray(ncells3,ncells2,ncells1);
+  ruser_meshblock_data[1].NewAthenaArray(ncells3,ncells2,ncells1);
+  ruser_meshblock_data[2].NewAthenaArray(ncells3,ncells2,ncells1);
+
+  terminalv = pin->GetReal("problem", "terminalv");
+  evap = pin->GetReal("problem", "evap");
+  Real dz = ncells3 == 1 ? pcoord->dx2f(je) : pcoord->dx3f(ke);
+  Real ctime = 0.5*dz/terminalv;
+  long int iseed = -1 - Globals::my_rank;
+  for (int k = ks; k <= ke; ++k)
+    for (int j = js; j <= je; ++j)
+      for (int i = is; i <= ie; ++i)
+        ruser_meshblock_data[0](k,j,i) = -ctime*ran2(&iseed);
 }
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin)
@@ -148,7 +277,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   prg->AddReaction(pin, "chemistry", "r1", pmol);
   prg->AddReaction(pin, "chemistry", "r2", pmol);
 
-  // Step 3. define boundary conditions
+  // Step 3. define precipitation
+  ppg = new ParticleGroup(this, "rain");
+
+  // Step 4. define boundary conditions
   std::vector<std::string> xbot_str;
   Real ptop = pin->GetReal("problem", "ptop");
   Real pref = pin->GetReal("problem", "pref");
@@ -169,11 +301,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   mutop = peos->Mass(prim);
   cptop = peos->HeatCapacityP(prim);
 
-  // Step 4. construct 1D adiabatic T-P profile from top down
-  // 4.1) T-P profile outside of this MeshBlock
+  // Step 5. construct 1D adiabatic T-P profile from top down
+  // 5.1) T-P profile outside of this MeshBlock
   Real dz, ztop, zmbtop;
   int nx3 = pmy_mesh->mesh_size.nx3;
-  grav = nx3 == 1 ? -phydro->psrc->GetG2() : -phydro->psrc->GetG3();
+  grav = pin->GetReal("problem", "grav");
 
   if (nx3 == 1) { // 2D
     dz = pcoord->dx2f(je);
@@ -213,12 +345,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   ztop += dz;
 
-  // 4.2) T-P profile of this MeshBlock and add pertubation
+  // 5.2) T-P profile of this MeshBlock and add pertubation
   int start, end;
   if (nx3 == 1) { // 2D
     start = js;
     end = je;
-  } else {
+  } else {  // 3D
     start = ks;
     end = ke;
   }
@@ -260,7 +392,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
     }
   }
 
-  // 4.3) propagate T-P profile to the whole domain, add noise
+  // 5.3) propagate T-P profile to the whole domain, add noise
   // pertubation wavelength
   Real kx = 20.*(PI)/(pmy_mesh->mesh_size.x1max - pmy_mesh->mesh_size.x1min);
   Real ky = 20.*(PI)/(pmy_mesh->mesh_size.x2max - pmy_mesh->mesh_size.x2min);
@@ -279,10 +411,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
               *(1.0+cos(kx*pcoord->x1v(i)))*(1.0+cos(ky*pcoord->x2v(j)))/4.0;
         }
 
-  // Step 5. Cooling rate
+  // Step 6. Cooling rate
   crate = pin->GetReal("problem", "crate");
 
-  // Step 6. convert primitive variables to conserved variables
+  // Step 7. convert primitive variables to conserved variables
   peos->PrimitiveToConserved(phydro->w, pfield->bcc, phydro->u, pcoord, is, ie, js, je, ks, ke);
 }
 
@@ -303,7 +435,6 @@ int ReactionGroup::EquilibrateUV(Real prim[], EquationOfState *peos) const
 
     // H2O - H2O(s)
     rate = GasCloudIdeal(r1, prim, peos->latent_[r1.reactor[1]]/cv);
-    //std::cout << "rate = " << rate << std::endl;
     if (fabs(rate) > TINY_NUMBER) {
       for (int n = 0; n < 2; ++n)
         prim[r1.reactor[n]] += rate*r1.measure[n];
@@ -313,7 +444,6 @@ int ReactionGroup::EquilibrateUV(Real prim[], EquationOfState *peos) const
 
     // NH3 - NH3(s)
     rate = GasCloudIdeal(r2, prim, peos->latent_[r1.reactor[1]]/cv);
-    //std::cout << "rate = " << rate << std::endl;
     if (fabs(rate) > TINY_NUMBER) {
       for (int n = 0; n < 2; ++n)
         prim[r2.reactor[n]] += rate*r2.measure[n];
@@ -326,7 +456,6 @@ int ReactionGroup::EquilibrateUV(Real prim[], EquationOfState *peos) const
     for (int n = NGAS; n < NCOMP; ++n)
       xtf -= prim[n];
     dt = -latent/cv;
-    //std::cout << "dt = " << dt << std::endl;
     prim[IPR] *= xtf/xti*(prim[IT]+dt)/prim[IT];
     prim[IT]  += dt;
     iter++;

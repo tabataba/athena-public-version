@@ -19,6 +19,9 @@ template<typename T>
 inline T _min(T a, T b) { return a < b ? a : b; }
 
 template<typename T>
+inline T _min(T a, T b, T c) { return _min(_min(a, b), c); }
+
+template<typename T>
 inline int _sign(T x) { return x < 0. ? -1 : 1; }
 
 // binary search for the index of the value in an ordered array

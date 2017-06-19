@@ -17,6 +17,7 @@
 #include "../mesh/mesh.hpp"
 #include "../eos/eos.hpp"
 #include "../chemistry/reaction.hpp"
+#include "../hydro/hydro.hpp"
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -99,4 +100,11 @@ int __attribute__((weak)) ReactionGroup::EquilibrateSP(Real prim[], EquationOfSt
 {
   // return success
   return 1;
+}
+
+void __attribute__((weak)) Hydro::SourceTerm(const Real time, const Real dt, const int step,
+  const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &cons)
+{
+  // do nothing
+  return;
 }

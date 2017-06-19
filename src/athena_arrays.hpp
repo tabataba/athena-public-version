@@ -14,6 +14,7 @@
 
 // C++ headers
 #include <cstddef>  // size_t
+#include <iostream>
 
 template<typename T>
 class AthenaArray {
@@ -77,11 +78,6 @@ public:
   void InitWithShallowCopy(AthenaArray<T> &src);
   void InitWithShallowSlice(AthenaArray<T> &src, const int dim, const int indx,
     const int nvar);
-  void InitWithShallowSlice(AthenaArray<T> const& src, const int dim, const int indx,
-    const int nvar) const
-  {
-    InitWithShallowSlice(const_cast<AthenaArray<T>&>(src), dim, indx, nvar);
-  }
 
 private:
   T *pdata_;

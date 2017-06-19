@@ -16,6 +16,7 @@
 #endif
 
 class MeshBlock;
+template<typename T> class AthenaArray;
 //class ParticleTableOutput;
 
 struct Particle {
@@ -59,7 +60,8 @@ public:
   ParticleGroup* AddParticleGroup(std::string name);
   std::vector<Particle>& GetParticle(std::string name);
   std::vector<Particle> const& GetParticle(std::string name) const;
-  void PropertyUpdate(Real time, Real dt);
+  void PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
+    AthenaArray<Real>& cons);
 
 protected:
   ParticleUpdateFunc_t particle_fn_;

@@ -80,8 +80,11 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm)
       AddTimeIntegratorTask(INT_HYD, CALC_HYDFLX);
     }
     AddTimeIntegratorTask(SRCTERM_HYD,INT_HYD);
-    AddTimeIntegratorTask(SEND_HYD,SRCTERM_HYD);
+    AddTimeIntegratorTask(UPDATE_PT,SRCTERM_HYD);
+    AddTimeIntegratorTask(SEND_HYD,UPDATE_PT);
+    AddTimeIntegratorTask(SEND_PT, UPDATE_PT);
     AddTimeIntegratorTask(RECV_HYD,START_ALLRECV);
+    AddTimeIntegratorTask(RECV_PT, START_ALLRECV);
 
     // compute MHD fluxes, integrate field
     if (MAGNETIC_FIELDS_ENABLED) { // MHD
@@ -112,9 +115,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm)
 
     // update particle properties
     //AddTimeIntegratorTask(UPDATE_PT,RECV_HYD);
-    AddTimeIntegratorTask(UPDATE_PT, NONE);
-    AddTimeIntegratorTask(SEND_PT, UPDATE_PT);
-    AddTimeIntegratorTask(RECV_PT, UPDATE_PT|START_ALLRECV);
+    //AddTimeIntegratorTask(UPDATE_PT, NONE);
+    //AddTimeIntegratorTask(SEND_PT, UPDATE_PT);
+    //AddTimeIntegratorTask(RECV_PT, UPDATE_PT|START_ALLRECV);
 
     // everything else
     AddTimeIntegratorTask(PHY_BVAL,CON2PRIM);
@@ -430,18 +433,18 @@ enum TaskStatus TimeIntegratorTaskList::HydroSourceTerms(MeshBlock *pmb, int ste
   Field *pf=pmb->pfield;
 
   // return if there are no source terms to be added
-  if (ph->psrc->hydro_sourceterms_defined == false) return TASK_NEXT;
+  //if (ph->psrc->hydro_sourceterms_defined == false) return TASK_NEXT;
 
   Real dt = (step_wghts[(step-1)].c)*(pmb->pmy_mesh->dt);
   Real time;
   // *** this must be changed for the RK3 integrator
   if(step == 1) {
     time=pmb->pmy_mesh->time;
-    ph->psrc->AddHydroSourceTerms(time,dt,step,ph->flux,ph->w,pf->bcc,ph->u1);
+    ph->SourceTerm(time,dt,step,ph->w,pf->bcc,ph->u1);
   } else if(step == 2) {
     if      (integrator == "vl2") time=pmb->pmy_mesh->time + 0.5*pmb->pmy_mesh->dt;
     else if (integrator == "rk2") time=pmb->pmy_mesh->time +     pmb->pmy_mesh->dt;
-    ph->psrc->AddHydroSourceTerms(time,dt,step,ph->flux,ph->w1,pf->bcc1,ph->u);
+    ph->SourceTerm(time,dt,step,ph->w1,pf->bcc1,ph->u);
   } else {
     return TASK_FAIL;
   }
@@ -612,9 +615,10 @@ enum TaskStatus TimeIntegratorTaskList::ParticlePropertyUpdate(MeshBlock *pmb, i
   if (step != nsub_steps) return TASK_SUCCESS; // only do on last sub-step
 
   ParticleGroup *ppg = pmb->ppg;
+  Hydro *phydro = pmb->phydro;
 
   while (ppg != NULL) {
-    ppg->PropertyUpdate(pmb->pmy_mesh->time, pmb->pmy_mesh->dt);
+    ppg->PropertyUpdate(pmb->pmy_mesh->time, pmb->pmy_mesh->dt, phydro->w1, phydro->u);
     ppg = ppg->next;
   }
 
