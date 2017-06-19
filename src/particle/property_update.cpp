@@ -7,7 +7,7 @@
 #include "../math_funcs.hpp" // _interpn
 
 void ParticleGroup::PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
-  AthenaArray<Real>& cons)
+  AthenaArray<Real>& cons, AthenaArray<Real>& cons_out)
 {
   AthenaArray<Real> v1, v2, v3;
   Real loc[3];
@@ -53,7 +53,7 @@ void ParticleGroup::PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
 
     bool alive;
     if (particle_fn_ != NULL)
-      alive = particle_fn_(pmb, time, dt, q[i], prim, cons, kji);
+      alive = particle_fn_(pmb, time, dt, q[i], prim, cons, kji, cons_out);
     else
       alive = true;
 

@@ -103,7 +103,8 @@ int __attribute__((weak)) ReactionGroup::EquilibrateSP(Real prim[], EquationOfSt
 }
 
 void __attribute__((weak)) Hydro::SourceTerm(const Real time, const Real dt, const int step,
-  const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &cons)
+  const AthenaArray<Real> &prim, const AthenaArray<Real> &cons,
+  const AthenaArray<Real> &bcc, AthenaArray<Real> &cons_out)
 {
   // do nothing
   return;

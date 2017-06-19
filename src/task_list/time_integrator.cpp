@@ -440,11 +440,11 @@ enum TaskStatus TimeIntegratorTaskList::HydroSourceTerms(MeshBlock *pmb, int ste
   // *** this must be changed for the RK3 integrator
   if(step == 1) {
     time=pmb->pmy_mesh->time;
-    ph->SourceTerm(time,dt,step,ph->w,pf->bcc,ph->u1);
+    ph->SourceTerm(time,dt,step,ph->w,ph->u,pf->bcc,ph->u1);
   } else if(step == 2) {
     if      (integrator == "vl2") time=pmb->pmy_mesh->time + 0.5*pmb->pmy_mesh->dt;
     else if (integrator == "rk2") time=pmb->pmy_mesh->time +     pmb->pmy_mesh->dt;
-    ph->SourceTerm(time,dt,step,ph->w1,pf->bcc1,ph->u);
+    ph->SourceTerm(time,dt,step,ph->w1,ph->u1,pf->bcc1,ph->u);
   } else {
     return TASK_FAIL;
   }
@@ -618,7 +618,7 @@ enum TaskStatus TimeIntegratorTaskList::ParticlePropertyUpdate(MeshBlock *pmb, i
   Hydro *phydro = pmb->phydro;
 
   while (ppg != NULL) {
-    ppg->PropertyUpdate(pmb->pmy_mesh->time, pmb->pmy_mesh->dt, phydro->w1, phydro->u);
+    ppg->PropertyUpdate(pmb->pmy_mesh->time, pmb->pmy_mesh->dt, phydro->w1, phydro->u1, phydro->u);
     ppg = ppg->next;
   }
 

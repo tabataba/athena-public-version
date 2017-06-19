@@ -48,7 +48,8 @@ public:
     const int ivx, const AthenaArray<Real> &bx, AthenaArray<Real> &wl,
     AthenaArray<Real> &wr, AthenaArray<Real> &flx);
   void SourceTerm(const Real time, const Real dt, const int step,
-    const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &cons);
+    const AthenaArray<Real> &prim, const AthenaArray<Real> &cons,
+    const AthenaArray<Real> &bcc, AthenaArray<Real> &cons_out);
 
 private:
   AthenaArray<Real> dt1_,dt2_,dt3_;  // scratch arrays used in NewTimeStep

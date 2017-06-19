@@ -61,7 +61,7 @@ public:
   std::vector<Particle>& GetParticle(std::string name);
   std::vector<Particle> const& GetParticle(std::string name) const;
   void PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
-    AthenaArray<Real>& cons);
+    AthenaArray<Real>& cons, AthenaArray<Real>& cons_out);
 
 protected:
   ParticleUpdateFunc_t particle_fn_;

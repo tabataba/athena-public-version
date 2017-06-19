@@ -26,7 +26,7 @@
 Real mutop, mubot, cpbot, cptop, xbot[NCOMP], ttop, grav;
 
 // forcing
-Real crate, autoconversion, terminalv, evap;
+Real crate, autoc, terminalv, evap;
 
 // chemistry
 int iH2O = 1, iNH3 = 2, iH2Os = 3, iNH3s = 4;
@@ -130,14 +130,12 @@ void ProjectPressureOuterX3(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> 
 }
 
 void Hydro::SourceTerm(const Real time, const Real dt, const int step,
-  const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &cons)
+  const AthenaArray<Real> &prim, const AthenaArray<Real> &cons, 
+  const AthenaArray<Real> &bcc, AthenaArray<Real> &cons_out)
 {
   MeshBlock *pmb = pmy_block;
   Coordinates *pcoord = pmb->pcoord;
   AthenaArray<Real>& tlast_conversion = pmb->ruser_meshblock_data[0];
-  AthenaArray<Real>& rho_h2o = pmb->ruser_meshblock_data[1];
-  AthenaArray<Real>& rho_nh3 = pmb->ruser_meshblock_data[2];
-  Real rhon[NCOMP], rho;
   int nx3 = pmb->pmy_mesh->mesh_size.nx3;
 
   for (int k = pmb->ks; k <= pmb->ke; ++k)
@@ -146,22 +144,21 @@ void Hydro::SourceTerm(const Real time, const Real dt, const int step,
       for (int i = pmb->is; i <= pmb->ie; ++i) {
         // radiative forcing above 1 bar
         if (height > -35.E3) 
-          cons(IEN,k,j,i) -= 2.5*prim(IPR,k,j,i)*crate/prim(IT,k,j,i)*dt;
+          cons_out(IEN,k,j,i) -= 2.5*prim(IPR,k,j,i)*crate/prim(IT,k,j,i)*dt;
 
         // gravity
-        rho = TotalDensity(prim, i, j, k, pmb->peos->mu_, rhon);
-        rho_h2o(k,j,i) = rhon[iH2O];
-        rho_nh3(k,j,i) = rhon[iNH3];
+        Real rho = 0.;
+        for (int n = 0; n < NCOMP; ++n) rho += cons(n,k,j,i);
         if (nx3 == 1) {
-          cons(IM2,k,j,i) += -dt*rho*grav;
-          cons(IEN,k,j,i) += -dt*rho*grav*prim(IVY,k,j,i);
+          cons_out(IM2,k,j,i) += -dt*rho*grav;
+          cons_out(IEN,k,j,i) += -dt*rho*grav*prim(IVY,k,j,i);
         } else {
-          cons(IM3,k,j,i) += -dt*rho*grav;
-          cons(IEN,k,j,i) += -dt*rho*grav*prim(IVZ,k,j,i);
+          cons_out(IM3,k,j,i) += -dt*rho*grav;
+          cons_out(IEN,k,j,i) += -dt*rho*grav*prim(IVZ,k,j,i);
         }
 
         // cloud turns into precipitation
-        Real ctime = 0.5*pcoord->dx2f(j)/terminalv;
+        Real ctime = pcoord->dx2f(j)/terminalv;
         if (time - tlast_conversion(k,j,i) > ctime &&
           (prim(iH2Os,k,j,i) > TINY_NUMBER || prim(iNH3s,k,j,i) > TINY_NUMBER)) {
           Particle rain;
@@ -170,17 +167,17 @@ void Hydro::SourceTerm(const Real time, const Real dt, const int step,
           rain.x2 = pcoord->x2v(j);
           rain.x3 = pcoord->x3v(k);
 
-          rain.rdata[0] = std::min(cons(iH2Os,k,j,i), 
-            rhon[iH2Os]*ctime/(autoconversion + ctime));
-          rain.rdata[1] = std::min(cons(iNH3s,k,j,i), 
-            rhon[iNH3s]*ctime/(autoconversion + ctime));
+          rain.rdata[0] = std::min(cons_out(iH2Os,k,j,i),
+            cons(iH2Os,k,j,i)*ctime/(autoc + ctime));
+          rain.rdata[1] = std::min(cons_out(iNH3s,k,j,i),
+            cons(iNH3s,k,j,i)*ctime/(autoc + ctime));
 
-          cons(iH2Os,k,j,i) -= rain.rdata[0];
-          cons(iNH3s,k,j,i) -= rain.rdata[1];
-          cons(IM1,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVX,k,j,i);
-          cons(IM2,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVY,k,j,i);
-          cons(IM3,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVZ,k,j,i);
-          cons(IEN,k,j,i) -= rain.rdata[0]*pmb->peos->cv_[iH2Os]*prim(IT,k,j,i) +
+          cons_out(iH2Os,k,j,i) -= rain.rdata[0];
+          cons_out(iNH3s,k,j,i) -= rain.rdata[1];
+          cons_out(IM1,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVX,k,j,i);
+          cons_out(IM2,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVY,k,j,i);
+          cons_out(IM3,k,j,i) -= (rain.rdata[0] + rain.rdata[1])*prim(IVZ,k,j,i);
+          cons_out(IEN,k,j,i) -= rain.rdata[0]*pmb->peos->cv_[iH2Os]*prim(IT,k,j,i) +
                              rain.rdata[1]*pmb->peos->cv_[iNH3s]*prim(IT,k,j,i);
 
           pmb->ppg->q.push_back(rain);
@@ -191,14 +188,15 @@ void Hydro::SourceTerm(const Real time, const Real dt, const int step,
 }
 
 bool PrecipitationEvaporation(MeshBlock *pmb, Real const time, Real const dt,
-  Particle &pt, AthenaArray<Real> const& prim, AthenaArray<Real>& cons, int kji[3])
+  Particle &pt, AthenaArray<Real> const& prim, AthenaArray<Real> const& cons,
+  int kji[3], AthenaArray<Real>& cons_out)
 {
   int k = kji[0], j = kji[1], i = kji[2];
-  Real rhon[NCOMP], satx, xt = 1.;
+  Real satx, xt = 1.;
   for (int n = NGAS; n < NCOMP; ++n) xt -= prim(n,k,j,i);
 
-  Real rho_h2o = pmb->ruser_meshblock_data[1](k,j,i);
-  Real rho_nh3 = pmb->ruser_meshblock_data[2](k,j,i);
+  Real rho_h2o = cons(iH2O,k,j,i);
+  Real rho_nh3 = cons(iNH3,k,j,i);
 
   // evaporation
   satx = SatVaporPresH2OIdeal(prim(IT,k,j,i))/prim(IPR,k,j,i)*xt;
@@ -208,12 +206,12 @@ bool PrecipitationEvaporation(MeshBlock *pmb, Real const time, Real const dt,
   pt.rdata[0] -= std::max(evap_h2o, 0.);
   pt.rdata[1] -= std::max(evap_nh3, 0.);
 
-  cons(iH2Os,k,j,i) += evap_h2o;
-  cons(iNH3s,k,j,i) += evap_nh3;
-  cons(IM1,k,j,i) += (evap_h2o + evap_nh3)*prim(IVX,k,j,i);
-  cons(IM2,k,j,i) += (evap_h2o + evap_nh3)*prim(IVY,k,j,i);
-  cons(IM3,k,j,i) += (evap_h2o + evap_nh3)*prim(IVZ,k,j,i);
-  cons(IEN,k,j,i) += evap_h2o*pmb->peos->GetCv(iH2Os)*prim(IT,k,j,i) +
+  cons_out(iH2Os,k,j,i) += evap_h2o;
+  cons_out(iNH3s,k,j,i) += evap_nh3;
+  cons_out(IM1,k,j,i) += (evap_h2o + evap_nh3)*prim(IVX,k,j,i);
+  cons_out(IM2,k,j,i) += (evap_h2o + evap_nh3)*prim(IVY,k,j,i);
+  cons_out(IM3,k,j,i) += (evap_h2o + evap_nh3)*prim(IVZ,k,j,i);
+  cons_out(IEN,k,j,i) += evap_h2o*pmb->peos->GetCv(iH2Os)*prim(IT,k,j,i) +
                      evap_h2o*pmb->peos->GetCv(iNH3s)*prim(IT,k,j,i);
 
   if ((pt.rdata[0] < TINY_NUMBER) && (pt.rdata[1] < TINY_NUMBER))
@@ -246,15 +244,13 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
   if (block_size.nx3 > 1) ncells3 = block_size.nx3 + 2*(NGHOST);
 
   // initialize autoconversion time
-  AllocateRealUserMeshBlockDataField(3);
+  AllocateRealUserMeshBlockDataField(1);
   ruser_meshblock_data[0].NewAthenaArray(ncells3,ncells2,ncells1);
-  ruser_meshblock_data[1].NewAthenaArray(ncells3,ncells2,ncells1);
-  ruser_meshblock_data[2].NewAthenaArray(ncells3,ncells2,ncells1);
 
   terminalv = pin->GetReal("problem", "terminalv");
   evap = pin->GetReal("problem", "evap");
   Real dz = ncells3 == 1 ? pcoord->dx2f(je) : pcoord->dx3f(ke);
-  Real ctime = 0.5*dz/terminalv;
+  Real ctime = dz/terminalv;
   long int iseed = -1 - Globals::my_rank;
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
