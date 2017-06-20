@@ -211,7 +211,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
     EnrollUserBoundaryFunction(INNER_X3, ProjectPressureInnerX3);
     EnrollUserBoundaryFunction(OUTER_X3, ProjectPressureOuterX3);
   }
-  EnrollUserParticleUpdateFunction(PrecipitationEvaporation);
 }
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
@@ -251,7 +250,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   prg->AddReaction(pin, "chemistry", "r2", pmol);
 
   // Step 3. define precipitation
-  ppg = new ParticleGroup(this, "rain");
+  ppg = new ParticleGroup(this, "rain", PrecipitationEvaporation);
   evap      = pin->GetReal("problem", "evap");
   terminalv = pin->GetReal("problem", "terminalv");
   autoc     = pin->GetReal("problem", "autoc");

@@ -53,6 +53,8 @@ void BoundaryValues::DetachParticles(
 void BoundaryValues::SendParticleBuffers()
 {
   MeshBlock *pmb = pmy_block_;
+  int ntotal = 0;
+  if (pmb->ppg != NULL) ntotal = pmb->ppg->TotalNumber();
 
   for (int n = 0; n < pmb->nneighbor; ++n) {
     NeighborBlock &nb = pmb->neighbor[n];
@@ -60,7 +62,7 @@ void BoundaryValues::SendParticleBuffers()
     if (nb.rank == Globals::my_rank) {  // on the same process
       MeshBlock *pbl = pmb->pmy_mesh->FindMeshBlock(nb.gid);
       pbl->pbval->particle_recv_[nb.targetid] = particle_send_[nb.bufid];
-      for (int i = 0; i < ParticleGroup::ntotal; ++i)
+      for (int i = 0; i < ntotal; ++i)
         pbl->pbval->particle_num_recv_[nb.targetid][i] = particle_num_send_[nb.bufid][i];
       pbl->pbval->particle_flag_[nb.targetid] = BNDRY_ARRIVED;
     }
@@ -81,6 +83,14 @@ void BoundaryValues::ReceiveParticleBuffers()
   MeshBlock *pmb = pmy_block_;
   int test, rsize, tag;
 
+  if (pmb->ppg == NULL) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in BoundaryValues::ReceiveParticleBuffers" << std::endl
+        << "ParticleGroup is empty." << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+  }
+  int ntotal = pmb->ppg->TotalNumber();
+
   for (int n = 0; n < pmb->nneighbor; ++n) {
     NeighborBlock &nb = pmb->neighbor[n];
     if (particle_flag_[nb.bufid] == BNDRY_INIT) {
@@ -88,7 +98,7 @@ void BoundaryValues::ReceiveParticleBuffers()
       if (nb.rank != Globals::my_rank) { // MPI boundary
         MPI_Test(&req_particle_num_recv_[nb.bufid], &test, MPI_STATUS_IGNORE);
         if (test) {
-          rsize = particle_num_recv_[nb.bufid][ParticleGroup::ntotal - 1];
+          rsize = particle_num_recv_[nb.bufid][ntotal - 1];
           particle_recv_[nb.bufid].resize(rsize);
           tag = CreateBvalsMPITag(pmb->lid, TAG_PARTICLE, nb.bufid);
           MPI_Irecv(particle_recv_[nb.bufid].data(), rsize, MPI_PARTICLE,
@@ -115,6 +125,13 @@ bool BoundaryValues::AttachParticles(std::vector<Particle>& pt, int pid)
 {
   MeshBlock *pmb = pmy_block_;
   bool flag = true;
+  if (pmb->ppg == NULL) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in BoundaryValues::ReceiveParticleBuffers" << std::endl
+        << "ParticleGroup is empty." << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+  }
+  int ntotal = pmb->ppg->TotalNumber();
 
   for (int n = 0; n < pmb->nneighbor; ++n) {
     NeighborBlock &nb = pmb->neighbor[n];
@@ -148,7 +165,7 @@ bool BoundaryValues::AttachParticles(std::vector<Particle>& pt, int pid)
 
         pt.push_back(*it);
       }
-      if (pid == ParticleGroup::ntotal - 1)
+      if (pid == ntotal - 1)
         particle_flag_[nb.bufid] = BNDRY_COMPLETED; // completed
     } else flag = false;
   }

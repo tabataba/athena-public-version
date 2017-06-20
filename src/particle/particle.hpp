@@ -8,12 +8,6 @@
 
 // Athena++ classes headers
 #include "../athena.hpp"
-//#include "../athena_arrays.hpp"
-
-// MPI header
-#ifdef MPI_PARALLEL
-#include <mpi.h>
-#endif
 
 class MeshBlock;
 template<typename T> class AthenaArray;
@@ -38,30 +32,26 @@ struct Particle {
 };
 std::ostream& operator<<(std::ostream &os, Particle const& pt);
 
-#ifdef MPI_PARALLEL
-extern MPI_Datatype MPI_PARTICLE;
-#endif
-
 class ParticleGroup {
   //friend class ParticleTableOutput;
 public:
-  ParticleGroup(MeshBlock *pmb, std::string _name);
+  ParticleGroup(MeshBlock *pmb, std::string name, ParticleUpdateFunc_t func = NULL);
   ~ParticleGroup();
   
   // data
   MeshBlock* pmy_block;
-  std::string name;
+  std::string myname;
   ParticleGroup *prev, *next;
   std::vector<Particle> q;
   std::vector<int> bufid;
-  static int ntotal;
 
   // functions
-  ParticleGroup* AddParticleGroup(std::string name);
+  ParticleGroup* AddParticleGroup(std::string name, ParticleUpdateFunc_t func = NULL);
   std::vector<Particle>& GetParticle(std::string name);
   std::vector<Particle> const& GetParticle(std::string name) const;
   void PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
     AthenaArray<Real>& cons, AthenaArray<Real>& cons_out);
+  int TotalNumber();
 
 protected:
   ParticleUpdateFunc_t particle_fn_;

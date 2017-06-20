@@ -635,10 +635,10 @@ void BoundaryValues::Initialize(void)
   }
 
   // initialize particle
-  if (ParticleGroup::ntotal > 0)
+  if (pmb->ppg != NULL)
     for (int i = 0; i < pmb->pmy_mesh->maxneighbor_; ++i) {
-      particle_num_send_[i] = new int [ParticleGroup::ntotal];
-      particle_num_recv_[i] = new int [ParticleGroup::ntotal];
+      particle_num_send_[i] = new int [pmb->ppg->TotalNumber()];
+      particle_num_recv_[i] = new int [pmb->ppg->TotalNumber()];
     }
 
 #ifdef MPI_PARALLEL
@@ -677,11 +677,13 @@ void BoundaryValues::Initialize(void)
                     nb.rank,tag,MPI_COMM_WORLD,&req_hydro_recv_[nb.bufid]);
 
       // particle
+      int ntotal = 0;
+      if (pmb->ppg != NULL) ntotal = pmb->ppg->TotalNumber();
       tag = CreateBvalsMPITag(nb.lid, TAG_PARTICLE_NUM, nb.targetid);
-      MPI_Send_init(particle_num_send_[nb.bufid], ParticleGroup::ntotal, MPI_INT,
+      MPI_Send_init(particle_num_send_[nb.bufid], ntotal, MPI_INT,
                     nb.rank, tag, MPI_COMM_WORLD, &req_particle_num_send_[nb.bufid]);
       tag = CreateBvalsMPITag(pmb->lid, TAG_PARTICLE_NUM, nb.bufid);
-      MPI_Recv_init(particle_num_recv_[nb.bufid], ParticleGroup::ntotal, MPI_INT,
+      MPI_Recv_init(particle_num_recv_[nb.bufid], ntotal, MPI_INT,
                     nb.rank, tag, MPI_COMM_WORLD, &req_particle_num_recv_[nb.bufid]);
 
       // flux correction

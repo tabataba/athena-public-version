@@ -14,6 +14,7 @@
 #include "../math_funcs.hpp"     // _root, _sqr
 #include "../parameter_input.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../coordinates/geometry.hpp"
 #include "../eos/eos.hpp"
 #include "../hydro/hydro.hpp"
 #include "../field/field.hpp"
@@ -21,25 +22,58 @@
 #include "../utils/utils.hpp" // ran2
 #include "../particle/particle.hpp"
 
-// support functions
-void RotatePoleToEquator(Real *theta1, Real *phi1, Real theta0, Real phi0);
-void RotateEquatorToPole(Real *theta1, Real *phi1, Real theta0, Real phi0);
-void SphericalLatlonToCartesian(Real *x, Real *y, Real *z, Real a, Real b, Real c, Real phi, Real theta);
-void CartesianToSphericalLatlon(Real *a, Real *b, Real *c, Real x, Real y, Real z, Real phi, Real theta);
+// Coriolis parameter
+Real omegax, omegay, omegaz;
 
 // History output total absolute angular momentum and energy
 Real TotalAbsoluteAngularMomentum(MeshBlock *pm, int iout);
 Real TotalEnergy(MeshBlock *pm, int iout);
 
 // particle functions
-bool ParticleTranslate(MeshBlock *pmb, Particle &pt, int cid[3], Real const time, Real const dt);
+bool ParticleTranslate(MeshBlock *pmb, Real const time, Real const dt,
+  Particle &pt, AthenaArray<Real> const& prim, AthenaArray<Real> const& cons,
+  int kji[3], AthenaArray<Real>& cons_out)
+{
+  Real radius = pmb->pcoord->x3v(0),
+       lat = pmb->pcoord->x2v(kji[1]);
+  pt.x1 += pt.v1 * dt / (radius * cos(lat));
+  pt.x2 += pt.v2 * dt / radius;
+  return true;
+}
+
+// Coriolis force for spherical latlon grid
+void Hydro::SourceTerm(const Real time, const Real dt, const int step,
+  const AthenaArray<Real> &prim, const AthenaArray<Real> &cons, 
+  const AthenaArray<Real> &bcc, AthenaArray<Real> &cons_out)
+{
+  MeshBlock *pmb = pmy_block;
+  Coordinates *pcoord = pmb->pcoord;
+  bool nx3 = pmb->pmy_mesh->mesh_size.nx3;
+
+  Real phi, theta, omega1, omega2, omega3;
+
+  for (int k = pmb->ks; k <= pmb->ke; ++k)
+    for (int j = pmb->js; j <= pmb->je; ++j) 
+      for (int i = pmb->is; i <= pmb->ie; ++i) {
+        phi = pmb->pcoord->x1v(i);
+        theta = pmb->pcoord->x2v(j);
+
+        omega1 = - sin(phi)*omegax + cos(phi)*omegay;
+        omega2 = - sin(theta)*cos(phi)*omegax - sin(theta)*sin(phi)*omegay + cos(theta)*omegaz;
+        omega3 = cos(theta)*cos(phi)*omegax + cos(theta)*sin(phi)*omegay + sin(theta)*omegaz;
+
+        cons_out(IM1,k,j,i) += 2.*dt*(omega3*cons(IM2,k,j,i) - omega2*cons(IM3,k,j,i));
+        cons_out(IM2,k,j,i) += 2.*dt*(omega1*cons(IM3,k,j,i) - omega3*cons(IM1,k,j,i));
+        if (nx3 > 1) // 3D
+          cons_out(IM3,k,j,i) += 2.*dt*(omega2*cons(IM1,k,j,i) - omega1*cons(IM2,k,j,i));
+      }
+}
 
 void Mesh::InitUserMeshData(ParameterInput *pin)
 {
   AllocateUserHistoryOutput(2);
   EnrollUserHistoryOutput(0, TotalAbsoluteAngularMomentum, "AM");
   EnrollUserHistoryOutput(1, TotalEnergy, "EN");
-  EnrollUserParticleUpdateFunction(ParticleTranslate);
 }
 
 //  \brief Problem generator for shallow water model
@@ -52,6 +86,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   Real vgh  = pin->GetReal("problem", "vgh");
   Real gh0  = pin->GetReal("problem", "gh0");
   int  ntracers = pin->GetInteger("problem", "ntracers");
+
+  // coriolis parameter
+  omegax = pin->GetOrAddReal("problem", "omegax", 0.);
+  omegay = pin->GetOrAddReal("problem", "omegay", 0.);
+  omegaz = pin->GetOrAddReal("problem", "omegaz", 0.);
 
   Real radius = pcoord->x3v(0);
 
@@ -82,7 +121,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
       }
 
   // randomly distribute tracers over the domain
-  ppg = new ParticleGroup(this, "tracer");
+  ppg = new ParticleGroup(this, "tracer", ParticleTranslate);
   long int iseed = -1 - Globals::my_rank;
 
   Real x1min = block_size.x1min*0.99;
@@ -114,56 +153,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   delete[] vlon;
 }
 
-bool ParticleTranslate(MeshBlock *pmb, Particle &pt, int cid[3], Real const time, Real const dt)
-{
-  Real radius = pmb->pcoord->x3v(0),
-       lat = pmb->pcoord->x2v(cid[1]);
-  pt.x1 += pt.v1 * dt / (radius * cos(lat));
-  pt.x2 += pt.v2 * dt / radius;
-  return true;
-}
-
-void RotatePoleToEquator(Real *theta1, Real *phi1, Real theta0, Real phi0)
-{
-  *theta1 = asin(cos(theta0)*sin(phi0));
-  *phi1   = asin(cos(theta0)*cos(phi0)/cos(*theta1));
-
-  if (theta0 < 0. && (phi0 > -M_PI/2. && phi0 < M_PI/2.))
-    *phi1 = M_PI - *phi1;
-  if (theta0 < 0. && (phi0 < -M_PI/2. || phi0 > M_PI/2.))
-    *phi1 = - M_PI - *phi1;
-}
-
-void RotateEquatorToPole(Real *theta1, Real *phi1, Real theta0, Real phi0)
-{
-  *theta1 = asin(cos(theta0)*cos(phi0));
-  *phi1   = asin(sin(theta0)/cos(*theta1));
-
-  if (phi0 < 0. && theta0 > 0.)
-    *phi1 = M_PI - *phi1;
-  if (phi0 < 0. && theta0 < 0.)
-    *phi1 = - M_PI - *phi1;
-}
-
-void SphericalLatlonToCartesian(
-    Real *x, Real *y, Real *z, 
-    Real a, Real b, Real c,
-    Real phi, Real theta)
-{
-  *x = -a*sin(phi) - b*sin(theta)*cos(phi) + c*cos(theta)*cos(phi);
-  *y = a*cos(phi) - b*sin(theta)*sin(phi) + c*cos(theta)*sin(phi);
-  *z = b*cos(theta) + c*sin(theta);
-}
-
-void CartesianToSphericalLatlon(
-    Real *a, Real *b, Real *c, 
-    Real x, Real y, Real z, 
-    Real phi, Real theta)
-{
-  *a = -x*sin(phi) + y*cos(phi);
-  *b = -x*sin(theta)*cos(phi) - y*sin(theta)*sin(phi) + z*cos(theta);
-  *c = x*cos(theta)*cos(phi) + y*cos(theta)*sin(phi) + z*sin(theta);
-}
 
 Real TotalAbsoluteAngularMomentum(MeshBlock *pmb, int iout)
 {

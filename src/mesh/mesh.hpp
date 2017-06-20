@@ -24,6 +24,12 @@
 #include "meshblock_tree.hpp"
 #include "mesh_refinement.hpp"
 
+// MPI header
+#ifdef MPI_PARALLEL
+#include <mpi.h>
+extern MPI_Datatype MPI_PARTICLE;
+#endif
+
 // Forward declarations
 class ParameterInput;
 class Mesh;
@@ -240,7 +246,7 @@ private:
   AMRFlagFunc_t AMRFlag_;
   TimeStepFunc_t UserTimeStep_;
   HistoryOutputFunc_t *user_history_func_;
-  ParticleUpdateFunc_t particle_fn_;
+  //ParticleUpdateFunc_t particle_fn_;
   void AllocateRealUserMeshDataField(int n);
   void AllocateIntUserMeshDataField(int n);
   void OutputMeshStructure(int dim);

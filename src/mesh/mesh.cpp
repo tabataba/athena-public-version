@@ -31,6 +31,7 @@
 #include "../outputs/io_wrapper.hpp"
 #include "../utils/buffer_utils.hpp"
 #include "../reconstruct/reconstruction.hpp"
+#include "../particle/particle.hpp"
 #include "mesh_refinement.hpp"
 #include "meshblock_tree.hpp"
 #include "mesh.hpp"
@@ -38,6 +39,7 @@
 // MPI/OpenMP header
 #ifdef MPI_PARALLEL
 #include <mpi.h>
+MPI_Datatype MPI_PARTICLE;
 #endif
 
 #ifdef OPENMP_PARALLEL
@@ -49,6 +51,29 @@
 
 Mesh::Mesh(ParameterInput *pin, int mesh_test)
 {
+// MPI PARTICLE
+#ifdef MPI_PARALLEL
+  int counts[2] = {7 + NREAL_PARTICLE_DATA, NINT_PARTICLE_DATA};
+  MPI_Datatype types[2] = {MPI_ATHENA_REAL, MPI_INT};
+  MPI_Aint disps[2];
+
+  Particle p;
+
+  MPI_Address(&p.time, disps);
+  #if NINT_PARTICLE_DATA > 0
+    MPI_Address(&p.idata, disps + 1);
+  #endif
+
+  disps[1] -= disps[0];
+  disps[0] = 0;
+
+  if (NINT_PARTICLE_DATA > 0)
+    MPI_Type_struct(2, counts, disps, types, &MPI_PARTICLE);
+  else
+    MPI_Type_contiguous(counts[0], types[0], &MPI_PARTICLE);
+  MPI_Type_commit(&MPI_PARTICLE);
+#endif
+
   std::stringstream msg;
   RegionSize block_size;
   MeshBlockTree *neibt;
@@ -249,7 +274,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test)
   AMRFlag_=NULL;
   UserSourceTerm_=NULL;
   UserTimeStep_=NULL;
-  particle_fn_ = NULL;
+  //particle_fn_ = NULL;
 
   // calculate the logical root level and maximum level
   for (root_level=0; (1<<root_level)<nbmax; root_level++);
@@ -494,6 +519,29 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test)
 
 Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test)
 {
+// MPI PARTICLE
+#ifdef MPI_PARALLEL
+  int counts[2] = {7 + NREAL_PARTICLE_DATA, NINT_PARTICLE_DATA};
+  MPI_Datatype types[2] = {MPI_ATHENA_REAL, MPI_INT};
+  MPI_Aint disps[2];
+
+  Particle p;
+
+  MPI_Address(&p.time, disps);
+  #if NINT_PARTICLE_DATA > 0
+    MPI_Address(&p.idata, disps + 1);
+  #endif
+
+  disps[1] -= disps[0];
+  disps[0] = 0;
+
+  if (NINT_PARTICLE_DATA > 0)
+    MPI_Type_struct(2, counts, disps, types, &MPI_PARTICLE);
+  else
+    MPI_Type_contiguous(counts[0], types[0], &MPI_PARTICLE);
+  MPI_Type_commit(&MPI_PARTICLE);
+#endif
+
   std::stringstream msg;
   RegionSize block_size;
   enum BoundaryFlag block_bcs[6];
@@ -839,6 +887,10 @@ Mesh::~Mesh()
   for(int n=0; n<nint_user_mesh_data_; n++)
     iuser_mesh_data[n].DeleteAthenaArray();
   if(nint_user_mesh_data_>0) delete [] iuser_mesh_data;
+
+#ifdef MPI_PARALLEL
+  MPI_Type_free(&MPI_PARTICLE);
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -1064,11 +1116,11 @@ void Mesh::EnrollUserTimeStepFunction(TimeStepFunc_t my_func)
 //! \fn void Mesh::EnrollUserParticleUpdateFunction(ParticleUpdateFunc_t my_func)
 //  \brief Enroll a user-defined particle update function
 
-void Mesh::EnrollUserParticleUpdateFunction(ParticleUpdateFunc_t my_func)
-{
-  particle_fn_ = my_func;
-  return;
-}
+//void Mesh::EnrollUserParticleUpdateFunction(ParticleUpdateFunc_t my_func)
+//{
+//  particle_fn_ = my_func;
+//  return;
+//}
 
 //----------------------------------------------------------------------------------------
 //! \fn void Mesh::AllocateUserHistoryOutput(int n)

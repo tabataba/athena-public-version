@@ -5,16 +5,9 @@
 
 // Athena++ headers
 #include "particle.hpp"
-//#include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../mesh/mesh.hpp"
 #include "../coordinates/coordinates.hpp"
-
-// MPI header
-#ifdef MPI_PARALLEL
-#include <mpi.h>
-MPI_Datatype MPI_PARTICLE;
-#endif
 
 Particle::Particle() :
   time(0.), x1(0.), x2(0.), x3(0.),
@@ -81,15 +74,12 @@ std::ostream& operator<<(std::ostream &os, Particle const& pt)
   return os;
 }
 
-int ParticleGroup::ntotal = 0;
-
 // constructor, initializes data structure and parameters
-ParticleGroup::ParticleGroup(MeshBlock *pmb, std::string _name):
-  pmy_block(pmb), name(_name)
+ParticleGroup::ParticleGroup(MeshBlock *pmb, std::string name, ParticleUpdateFunc_t func):
+  pmy_block(pmb), myname(name), particle_fn_(func)
 {
   prev = NULL;
   next = NULL;
-  particle_fn_ = pmb->pmy_mesh->particle_fn_;
 
   int ncells1 = pmb->block_size.nx1 + 2*(NGHOST);
   int ncells2 = 1, ncells3 = 1;
@@ -108,32 +98,6 @@ ParticleGroup::ParticleGroup(MeshBlock *pmb, std::string _name):
   lengths_[0] = ncells3;
   lengths_[1] = ncells2;
   lengths_[2] = ncells1;
-
-#ifdef MPI_PARALLEL
-  if (ntotal == 0) {
-    int counts[2] = {7 + NREAL_PARTICLE_DATA, NINT_PARTICLE_DATA};
-    MPI_Datatype types[2] = {MPI_ATHENA_REAL, MPI_INT};
-    MPI_Aint disps[2];
-
-    Particle p;
-
-    MPI_Address(&p.time, disps);
-    #if NINT_PARTICLE_DATA > 0
-      MPI_Address(&p.idata, disps + 1);
-    #endif
-
-    disps[1] -= disps[0];
-    disps[0] = 0;
-
-    if (NINT_PARTICLE_DATA > 0)
-      MPI_Type_struct(2, counts, disps, types, &MPI_PARTICLE);
-    else
-      MPI_Type_contiguous(counts[0], types[0], &MPI_PARTICLE);
-    MPI_Type_commit(&MPI_PARTICLE);
-  }
-#endif
-
-  ntotal++;
 }
 
 // destructor
@@ -142,16 +106,11 @@ ParticleGroup::~ParticleGroup()
   delete[] coordinates_;
   if (prev != NULL) prev->next = next;
   if (next != NULL) next->prev = prev;
-  ntotal--;
-
-#ifdef MPI_PARALLEL
-  if (ntotal == 0)
-    MPI_Type_free(&MPI_PARTICLE);
-#endif
 }
 
 // functions
-ParticleGroup* ParticleGroup::AddParticleGroup(std::string name)
+ParticleGroup* ParticleGroup::AddParticleGroup(std::string name, ParticleUpdateFunc_t
+func)
 {
   std::stringstream msg;
   ParticleGroup *p = this;
@@ -160,7 +119,7 @@ ParticleGroup* ParticleGroup::AddParticleGroup(std::string name)
     throw std::runtime_error(msg.str().c_str());
   }
   while (p->next != NULL) p = p->next;
-  p->next = new ParticleGroup(pmy_block, name);
+  p->next = new ParticleGroup(pmy_block, name, func);
   p->next->prev = p;
   p->next->next = NULL;
 
@@ -172,7 +131,7 @@ std::vector<Particle>& ParticleGroup::GetParticle(std::string name)
   std::stringstream msg;
   ParticleGroup *p = this;
 
-  while ((p != NULL) && (p->name != name)) p = p->next;
+  while ((p != NULL) && (p->myname != name)) p = p->next;
   if (p == NULL) {
     msg << "### FATAL ERROR in GetParticle : ParticleGroup " << name << " not found" << std::endl;
     throw std::runtime_error(msg.str().c_str());
@@ -186,11 +145,22 @@ std::vector<Particle> const& ParticleGroup::GetParticle(std::string name) const
   std::stringstream msg;
   ParticleGroup const *p = this;
 
-  while ((p != NULL) && (p->name != name)) p = p->next;
+  while ((p != NULL) && (p->myname != name)) p = p->next;
   if (p == NULL) {
     msg << "### FATAL ERROR in GetParticle : ParticleGroup " << name << " not found" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
 
   return p->q;
+}
+
+int ParticleGroup::TotalNumber()
+{
+  int ntotal = 1;
+  ParticleGroup *p = this;
+  while (p->next != NULL) {
+    p = p->next;
+    ntotal++;
+  }
+  return ntotal;
 }
