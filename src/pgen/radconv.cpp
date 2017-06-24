@@ -1,4 +1,4 @@
-// ! \file thermodynamics.cpp
+// ! \file radconv.cpp
 //   \brief thermodynamic model
 
 // C++ headers
@@ -82,6 +82,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         phydro->w(IVZ,k,j,i) = 0.;
         phydro->w(IPR,k,j,i) = pcoord->x1v(i);
       }
+
+  std::cout << *pabs << std::endl;
+  Real prim[NHYDRO];
+  for (int n = 0; n < NHYDRO; ++n)
+    prim[n] = phydro->w(n,ks,js,is);
+  std::cout << pabs->AbsorptionCoefficient(1200., prim) << std::endl;
 
   /*Real norm, time = 0.;
   for (int i = is; i <= ie; ++i) {

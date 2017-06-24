@@ -1,6 +1,8 @@
 // C/C++ headers
 #include <iostream>
 #include <algorithm>
+#include <stdexcept>
+#include <cstring>
 
 // Athena++ headers
 #include "../chemistry/molecule.hpp"
@@ -60,25 +62,29 @@ double HitranAbsorber::RefTemp_(double pres) const {
 void HitranAbsorber::LoadCoefficient(std::string fname)
 {
 #ifdef NETCDFOUTPUT
-  int fileid, dimid, varid;
+  int fileid, dimid, varid, err;
   char tname[80];
   nc_open(fname.c_str(), NC_NETCDF4, &fileid);
 
   nc_inq_dimid(fileid, "Wavenumber", &dimid);
-  nc_inq_dimlen(fileid, dimid, len_);
+  nc_inq_dimlen(fileid, dimid, (size_t*)len_);
   nc_inq_dimid(fileid, "Pressure", &dimid);
-  nc_inq_dimlen(fileid, dimid, len_ + 1);
+  nc_inq_dimlen(fileid, dimid, (size_t*)(len_ + 1));
   strcpy(tname, "T_");
   strcat(tname, myname.c_str());
   nc_inq_dimid(fileid, tname, &dimid);
-  nc_inq_dimlen(fileid, dimid, len_ + 2);
+  nc_inq_dimlen(fileid, dimid, (size_t*)(len_ + 2));
 
   axis_.resize(len_[0] + len_[1] + len_[2]);
 
   nc_inq_varid(fileid, "Wavenumber", &varid);
   nc_get_var_double(fileid, varid, axis_.data());
-  nc_inq_varid(fileid, "Pressure", &varid);
-  nc_get_var_double(fileid, varid, axis_.data() + len_[0]);
+  err = nc_inq_varid(fileid, "Pressure", &varid);
+  if (err != NC_NOERR)
+    throw std::runtime_error(nc_strerror(err));
+  err = nc_get_var_double(fileid, varid, axis_.data() + len_[0]);
+  if (err != NC_NOERR)
+    throw std::runtime_error(nc_strerror(err));
   nc_inq_varid(fileid, tname, &varid);
   nc_get_var_double(fileid, varid, axis_.data() + len_[0] + len_[1]);
 
