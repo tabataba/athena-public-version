@@ -26,6 +26,7 @@
 #include "../particle/particle.hpp"
 #include "../chemistry/molecule.hpp"
 #include "../chemistry/reaction.hpp"
+#include "../radiation/absorber.hpp"
 #include "../bvals/bvals.hpp"
 #include "../eos/eos.hpp"
 #include "../parameter_input.hpp"
@@ -147,6 +148,9 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   // chemistry-related objects
   pmol = NULL;
   prg = NULL;
+
+  // radiation-related objects
+  pabs = NULL;
 
   // Create user mesh data
   InitUserMeshBlockData(pin);
@@ -326,6 +330,13 @@ MeshBlock::~MeshBlock()
     delete p;
   }
   pmol = NULL;
+
+  while (pabs != NULL) {
+    Absorber *p = pabs;
+    pabs = pabs->next;
+    delete p;
+  }
+  pabs = NULL;
 
   while (prg != NULL) {
     ReactionGroup *p = prg;

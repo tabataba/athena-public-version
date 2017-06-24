@@ -10,6 +10,8 @@
 #include "../parameter_input.hpp"
 #include "../chemistry/molecule.hpp"
 #include "../chemistry/reaction.hpp"
+#include "../chemistry/condensation.hpp"
+#include "../radiation/absorber.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../hydro/hydro.hpp"
 #include "../eos/eos.hpp"
@@ -30,11 +32,24 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 {
   std::stringstream msg;
 
+  // Step 1. define molecules
   pmol = new Molecule(pin);
-  if (Molecule::ntotal != NCOMP) {
-    msg << "### FATAL ERROR in ProblemGenerator: Molecule::ntotal != NMOL" << std::endl;
+  if (pmol->TotalNumber() != NCOMP) {
+    msg << "### FATAL ERROR in ProblemGenerator: pmol->TotalNumber() != NMOL" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
+  Molecule *p = pmol;
+  Real tmols = 0.;
+  Real mixr[NCOMP];
+  for (int i = 0; i < NCOMP; ++i) {
+    Real solar = pin->GetOrAddReal("chemistry", p->myname + ".solar", 0.);
+    Real enrich = pin->GetOrAddReal("chemistry", p->myname + ".enrich", 0.);
+    mixr[i] = solar*enrich;
+    tmols += mixr[i];
+    p = p->next;
+  }
+
+  // Step 2. define reactions
   prg = new ReactionGroup(this, "condensation");
   prg->AddReaction(pin, "chemistry", "r1", pmol, &GasCloudIdeal);
   prg->AddReaction(pin, "chemistry", "r2", pmol, &GasCloudIdeal);
@@ -44,33 +59,31 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   prg->AddReaction(pin, "chemistry", "r6", pmol, &GasCloudIdeal);
   prg->AddReaction(pin, "chemistry", "r7", pmol, &LiquidSolidIdeal);
 
-  Real mixr[NCOMP];
+  // Step 3. define absorbers
+  std::string kfile = pin->GetString("radiation", "kcoeff_file");
+  pabs = new HitranAbsorber("CH4", pmol);
+  pabs->LoadCoefficient(kfile);
+  pabs->AddAbsorber(HitranAbsorber("C2H2", pmol))
+      ->LoadCoefficient(kfile);
+  pabs->AddAbsorber(HitranAbsorber("C2H4", pmol))
+      ->LoadCoefficient(kfile);
+  pabs->AddAbsorber(HitranAbsorber("C2H6", pmol))
+      ->LoadCoefficient(kfile);
 
-  // read solar abundance and enrichment factor
-  Molecule *p = pmol;
-  Real tmols = 0.;
-  for (int i = 0; i < NCOMP; ++i) {
-    Real solar = pin->GetOrAddReal("chemistry", p->name + ".solar", 0.);
-    Real enrich = pin->GetOrAddReal("chemistry", p->name + ".enrich", 0.);
-    mixr[i] = solar*enrich;
-    tmols += mixr[i];
-    p = p->next;
-  }
-
-  // set primitive variables
+  // Step 4. set primitive variables
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
       for (int i = is; i <= ie; ++i) {
         phydro->w(IT,k,j,i) = 132.;
         for (int c = 1; c < NCOMP; ++c)
           phydro->w(c,k,j,i) = mixr[c]/tmols;
-        phydro->w(IVX,k,j,i) = 1.;
-        phydro->w(IVY,k,j,i) = 2.;
-        phydro->w(IVZ,k,j,i) = 3.;
+        phydro->w(IVX,k,j,i) = 0.;
+        phydro->w(IVY,k,j,i) = 0.;
+        phydro->w(IVZ,k,j,i) = 0.;
         phydro->w(IPR,k,j,i) = pcoord->x1v(i);
       }
 
-  Real norm, time = 0.;
+  /*Real norm, time = 0.;
   for (int i = is; i <= ie; ++i) {
     std::cout << "i = " << i << std::endl;
     int ncycle = 0;
@@ -90,6 +103,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   peos->ConservedToPrimitive(phydro->u, phydro->w, pfield->b, phydro->w, pfield->bcc, pcoord, is, is, js, js, ks, ks);
   for (int n = 0; n < NHYDRO; ++n)
     std::cout << phydro->w(n,ks,js,is) << std::endl;
+  */
 
   // convert to conservative variables
   // bcc is cell-centered magnetic fields, it is only a place holder here

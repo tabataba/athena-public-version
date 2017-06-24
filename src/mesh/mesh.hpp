@@ -45,6 +45,7 @@ class EquationOfState;
 class ParticleGroup;
 class Molecule;
 class ReactionGroup;
+class Absorber;
 
 //----------------------------------------------------------------------------------------
 //! \struct NeighborBlock
@@ -143,6 +144,9 @@ public:
   // chemistry-related objects
   Molecule *pmol;
   ReactionGroup *prg;
+
+  // radiation-related objects
+  Absorber *pabs;
 
   MeshBlock *prev, *next;
 

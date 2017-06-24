@@ -35,7 +35,7 @@ HeterogeneousHydro::HeterogeneousHydro(MeshBlock *pmb, ParameterInput *pin):
   // read mu, size should be NCOMP, unit is [g/mol], convert to [kg/mol]
   SplitString(pin->GetString("hydro", "mu"), str);
   if (str.size() != NCOMP) {
-    msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of gases in 'gamma' does not equal NGAS" << std::endl;
+    msg << "### FATAL ERROR in heterogeneous_hydro.cpp::HeterogeneousHydro: number of gases in 'mu' does not equal NGAS" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (int i = 0; i < NCOMP; ++i)
