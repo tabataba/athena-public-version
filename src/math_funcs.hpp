@@ -24,6 +24,12 @@ inline T _min(T a, T b, T c) { return _min(_min(a, b), c); }
 template<typename T>
 inline int _sign(T x) { return x < 0. ? -1 : 1; }
 
+template<typename T>
+inline T _quadsol1(T a, T b, T c) {return (-b + sqrt(b*b - 4.*a*c))/(2.*a);}
+
+template<typename T>
+inline T _quadsol2(T a, T b, T c) {return (-b - sqrt(b*b - 4.*a*c))/(2.*a);}
+
 // binary search for the index of the value in an ordered array
 template<typename T>
 int _locate(

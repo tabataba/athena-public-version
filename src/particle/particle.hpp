@@ -49,8 +49,8 @@ public:
   ParticleGroup* AddParticleGroup(std::string name, ParticleUpdateFunc_t func = NULL);
   std::vector<Particle>& GetParticle(std::string name);
   std::vector<Particle> const& GetParticle(std::string name) const;
-  void PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
-    AthenaArray<Real>& cons, AthenaArray<Real>& cons_out);
+  void PropertyUpdate(Real time, Real dt, AthenaArray<Real> const & prim,
+    AthenaArray<Real> const& cons, AthenaArray<Real>& cons_out);
   int TotalNumber();
 
 protected:

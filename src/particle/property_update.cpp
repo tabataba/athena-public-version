@@ -6,8 +6,8 @@
 #include "../hydro/hydro.hpp"
 #include "../math_funcs.hpp" // _interpn
 
-void ParticleGroup::PropertyUpdate(Real time, Real dt, AthenaArray<Real>& prim,
-  AthenaArray<Real>& cons, AthenaArray<Real>& cons_out)
+void ParticleGroup::PropertyUpdate(Real time, Real dt, AthenaArray<Real> const& prim,
+  AthenaArray<Real> const& cons, AthenaArray<Real>& cons_out)
 {
   AthenaArray<Real> v1, v2, v3;
   Real loc[3];
