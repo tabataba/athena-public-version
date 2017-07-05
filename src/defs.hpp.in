@@ -59,6 +59,9 @@
 // NETCDF output (NETCDFOUTPUT or NO_NETCDFOUTPUT)
 #define @NETCDF_OPTION@
 
+// DISORT radiative transfer
+#define @USE_DISORT@
+
 // compiler options
 #define COMPILED_WITH "@COMPILER_CHOICE@"
 #define COMPILER_COMMAND "@COMPILER_COMMAND@"

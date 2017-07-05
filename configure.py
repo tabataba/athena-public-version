@@ -165,6 +165,12 @@ parser.add_argument('-netcdf',
     default=False,
     help='enable NETCDF Output')
 
+# -disort argument
+parser.add_argument('-disort',
+    action='store_true',
+    default=False,
+    help='enable DISORT radiative transfer model')
+
 # --hdf5_path argument
 parser.add_argument('--hdf5_path',
     type=str,
@@ -176,6 +182,12 @@ parser.add_argument('--netcdf_path',
     type=str,
     default='',
     help='path to NETCDF libraries')
+
+# --disort_path argument
+parser.add_argument('--disort_path',
+    type=str,
+    default='thirdparty/cdisort-2.1.3',
+    help='path to DISORT libraries')
 
 # --cxx=[name] argument
 parser.add_argument('--cxx',
@@ -465,6 +477,16 @@ if args['netcdf']:
 else:
   definitions['NETCDF_OPTION'] = 'NO_NETCDFOUTPUT'
 
+# -disort argument
+if args['disort']:
+  definitions['USE_DISORT'] = 'USE_DISORT'
+  makefile_options['PREPROCESSOR_FLAGS'] += '-I%s' % args['disort_path']
+  makefile_options['LINKER_FLAGS'] += '-L%s' % args['disort_path']
+  if args['cxx'] == 'g++' or args['cxx'] == 'icc' or args['cxx'] == 'cray':
+    makefile_options['LIBRARY_FLAGS'] += ' -lcdisort'
+else:
+  definitions['USE_DISORT'] = 'NO_DISORT'
+
 # --ccmd=[name] argument
 if args['ccmd'] is not None:
   definitions['COMPILER_COMMAND'] = makefile_options['COMPILER_COMMAND'] = args['ccmd']
@@ -524,6 +546,7 @@ print('  MPI parallelism:         ' + ('ON' if args['mpi'] else 'OFF'))
 print('  OpenMP parallelism:      ' + ('ON' if args['omp'] else 'OFF'))
 print('  HDF5 output:             ' + ('ON' if args['hdf5'] else 'OFF'))
 print('  NETCDF output:           ' + ('ON' if args['netcdf'] else 'OFF'))
+print('  DISORT radiation model:  ' + ('ON' if args['disort'] else 'OFF'))
 print('  Compiler:                ' + args['cxx'])
 print('  Compilation command:     ' + makefile_options['COMPILER_COMMAND'] + ' ' \
     + makefile_options['PREPROCESSOR_FLAGS'] + ' ' + makefile_options['COMPILER_FLAGS'])
